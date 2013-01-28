@@ -1041,4 +1041,7 @@
          The wallpaper width suggestion by the launcher may be too large for
          the GPU to handle. -->
     <integer name="config_wallpaperMaxWidth">-1</integer>
+
+    <!-- Workaround for devices with broken keyboards -->
+    <bool name="config_forceDisableHardwareKeyboard">false</bool>
 </resources>
