@@ -383,7 +383,7 @@ public class NavigationBarView extends LinearLayout implements NavigationCallbac
                 (0 != (hints & StatusBarManager.NAVIGATION_HINT_RECENT_NOP)) ? 0.5f : 1.0f);
         }
 
-        if (button == NavigationCallback.NAVBAR_BACK_HINT) {
+        if (button == NavigationCallback.NAVBAR_BACK_HINT && back != null) {
             ((ImageView)getBackButton()).setImageDrawable(
                 (0 != (hints & StatusBarManager.NAVIGATION_HINT_BACK_ALT))
                     ? (mVertical ? mBackAltLandIcon : mBackAltIcon)
