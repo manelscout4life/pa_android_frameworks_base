@@ -138,10 +138,6 @@ public class RecentTasksLoader implements View.OnTouchListener {
         return mLoadedTasks;
     }
 
-    public void remove(TaskDescription td) {
-        mLoadedTasks.remove(td);
-    }
-
     public boolean isFirstScreenful() {
         return mFirstScreenful;
     }

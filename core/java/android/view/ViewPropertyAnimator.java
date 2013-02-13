@@ -701,7 +701,7 @@ public class ViewPropertyAnimator {
      *             view.animate().x(0);
      *         }
      *     };
-     *     view.animate().x(200).withEndAction(endAction);
+     *     view.animate().x(200).onEnd(endAction);
      * </pre>
      *
      * @param runnable The action to run when the next animation ends.

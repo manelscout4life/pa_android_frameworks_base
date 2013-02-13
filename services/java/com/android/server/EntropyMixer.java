@@ -17,7 +17,6 @@
 package com.android.server;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -98,10 +97,8 @@ public class EntropyMixer extends Binder {
     private void loadInitialEntropy() {
         try {
             RandomBlock.fromFile(entropyFile).toFile(randomDevice, false);
-        } catch (FileNotFoundException e) {
-            Slog.w(TAG, "No existing entropy file -- first boot?");
         } catch (IOException e) {
-            Slog.w(TAG, "Failure loading existing entropy file", e);
+            Slog.w(TAG, "unable to load initial entropy (first boot?)", e);
         }
     }
 
@@ -109,7 +106,7 @@ public class EntropyMixer extends Binder {
         try {
             RandomBlock.fromFile(randomDevice).toFile(entropyFile, true);
         } catch (IOException e) {
-            Slog.w(TAG, "Unable to write entropy", e);
+            Slog.w(TAG, "unable to write entropy", e);
         }
     }
 

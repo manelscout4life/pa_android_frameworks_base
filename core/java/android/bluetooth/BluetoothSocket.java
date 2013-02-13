@@ -300,6 +300,7 @@ public final class BluetoothSocket implements Closeable {
         if (mDevice == null) throw new IOException("Connect is called on null device");
 
         try {
+            // TODO(BT) derive flag from auth and encrypt
             if (mSocketState == SocketState.CLOSED) throw new IOException("socket closed");
             IBluetooth bluetoothProxy = BluetoothAdapter.getDefaultAdapter().getBluetoothService(null);
             if (bluetoothProxy == null) throw new IOException("Bluetooth is off");
@@ -348,6 +349,7 @@ public final class BluetoothSocket implements Closeable {
                     mUuid, mPort, getSecurityFlags());
         } catch (RemoteException e) {
             Log.e(TAG, Log.getStackTraceString(new Throwable()));
+            // TODO(BT) right error code?
             return -1;
         }
 
@@ -386,13 +388,8 @@ public final class BluetoothSocket implements Closeable {
     /*package*/ BluetoothSocket accept(int timeout) throws IOException {
         BluetoothSocket acceptedSocket;
         if (mSocketState != SocketState.LISTENING) throw new IOException("bt socket is not in listen state");
-        if(timeout > 0) {
-            Log.d(TAG, "accept() set timeout (ms):" + timeout);
-           mSocket.setSoTimeout(timeout);
-        }
+        // TODO(BT) wait on an incoming connection
         String RemoteAddr = waitSocketSignal(mSocketIS);
-        if(timeout > 0)
-            mSocket.setSoTimeout(0);
         synchronized(this)
         {
             if (mSocketState != SocketState.LISTENING)
@@ -400,6 +397,8 @@ public final class BluetoothSocket implements Closeable {
             acceptedSocket = acceptSocket(RemoteAddr);
             //quick drop the reference of the file handle
         }
+        // TODO(BT) rfcomm socket only supports one connection, return this?
+        // return this;
         return acceptedSocket;
     }
 
@@ -429,7 +428,7 @@ public final class BluetoothSocket implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (VDBG) Log.d(TAG, "close() in, this: " + this + ", channel: " + mPort + ", state: " + mSocketState);
+        Log.d(TAG, "close() in, this: " + this + ", channel: " + mPort + ", state: " + mSocketState);
         if(mSocketState == SocketState.CLOSED)
             return;
         else
@@ -452,6 +451,7 @@ public final class BluetoothSocket implements Closeable {
                     mPfd.detachFd();
            }
         }
+        // TODO(BT) unbind proxy,
     }
 
     /*package */ void removeChannel() {
@@ -471,8 +471,6 @@ public final class BluetoothSocket implements Closeable {
         ByteBuffer bb = ByteBuffer.wrap(sig);
         bb.order(ByteOrder.nativeOrder());
         int size = bb.getShort();
-        if(size != SOCK_SIGNAL_SIZE)
-            throw new IOException("Connection failure, wrong signal size: " + size);
         byte [] addr = new byte[6];
         bb.get(addr);
         int channel = bb.getInt();
@@ -489,7 +487,7 @@ public final class BluetoothSocket implements Closeable {
         while(left > 0) {
             int ret = is.read(b, b.length - left, left);
             if(ret <= 0)
-                 throw new IOException("read failed, socket might closed or timeout, read ret: " + ret);
+                 throw new IOException("read failed, socket might closed, read ret: " + ret);
             left -= ret;
             if(left != 0)
                 Log.w(TAG, "readAll() looping, read partial size: " + (b.length - left) +

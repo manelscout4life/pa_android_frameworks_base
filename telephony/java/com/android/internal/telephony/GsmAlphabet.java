@@ -803,10 +803,6 @@ public class GsmAlphabet {
      */
     public static TextEncodingDetails
     countGsmSeptets(CharSequence s, boolean use7bitOnly) {
-        // Load enabled language tables from config.xml, including any MCC overlays
-        if (!sDisableCountryEncodingCheck) {
-            enableCountrySpecificEncodings();
-        }
         // fast path for common case where no national language shift tables are enabled
         if (sEnabledSingleShiftTables.length + sEnabledLockingShiftTables.length == 0) {
             TextEncodingDetails ted = new TextEncodingDetails();
@@ -993,7 +989,6 @@ public class GsmAlphabet {
      */
     static synchronized void setEnabledSingleShiftTables(int[] tables) {
         sEnabledSingleShiftTables = tables;
-        sDisableCountryEncodingCheck = true;
 
         if (tables.length > 0) {
             sHighestEnabledSingleShiftCode = tables[tables.length - 1];
@@ -1011,7 +1006,6 @@ public class GsmAlphabet {
      */
     static synchronized void setEnabledLockingShiftTables(int[] tables) {
         sEnabledLockingShiftTables = tables;
-        sDisableCountryEncodingCheck = true;
     }
 
     /**
@@ -1036,24 +1030,6 @@ public class GsmAlphabet {
         return sEnabledLockingShiftTables;
     }
 
-    /**
-     * Enable country-specific language tables from MCC-specific overlays.
-     * @context the context to use to get the TelephonyManager
-     */
-    private static void enableCountrySpecificEncodings() {
-        Resources r = Resources.getSystem();
-        // See comments in frameworks/base/core/res/res/values/config.xml for allowed values
-        sEnabledSingleShiftTables = r.getIntArray(R.array.config_sms_enabled_single_shift_tables);
-        sEnabledLockingShiftTables = r.getIntArray(R.array.config_sms_enabled_locking_shift_tables);
-
-        if (sEnabledSingleShiftTables.length > 0) {
-            sHighestEnabledSingleShiftCode =
-                    sEnabledSingleShiftTables[sEnabledSingleShiftTables.length-1];
-        } else {
-            sHighestEnabledSingleShiftCode = 0;
-        }
-    }
-
     /** Reverse mapping from Unicode characters to indexes into language tables. */
     private static final SparseIntArray[] sCharsToGsmTables;
 
@@ -1068,9 +1044,6 @@ public class GsmAlphabet {
 
     /** Highest language code to include in array of single shift counters. */
     private static int sHighestEnabledSingleShiftCode;
-
-    /** Flag to bypass check for country-specific overlays (for test cases only). */
-    private static boolean sDisableCountryEncodingCheck = false;
 
     /**
      * Septet counter for a specific locking shift table and all of
@@ -1435,12 +1408,22 @@ public class GsmAlphabet {
     };
 
     static {
-        enableCountrySpecificEncodings();
+        Resources r = Resources.getSystem();
+        // See comments in frameworks/base/core/res/res/values/config.xml for allowed values
+        sEnabledSingleShiftTables = r.getIntArray(R.array.config_sms_enabled_single_shift_tables);
+        sEnabledLockingShiftTables = r.getIntArray(R.array.config_sms_enabled_locking_shift_tables);
         int numTables = sLanguageTables.length;
         int numShiftTables = sLanguageShiftTables.length;
         if (numTables != numShiftTables) {
             Log.e(TAG, "Error: language tables array length " + numTables +
                     " != shift tables array length " + numShiftTables);
+        }
+
+        if (sEnabledSingleShiftTables.length > 0) {
+            sHighestEnabledSingleShiftCode =
+                    sEnabledSingleShiftTables[sEnabledSingleShiftTables.length-1];
+        } else {
+            sHighestEnabledSingleShiftCode = 0;
         }
 
         sCharsToGsmTables = new SparseIntArray[numTables];

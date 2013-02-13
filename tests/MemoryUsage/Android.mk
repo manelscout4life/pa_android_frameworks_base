@@ -8,8 +8,7 @@ LOCAL_SRC_FILES := $(call all-java-files-under, src)
 
 LOCAL_PACKAGE_NAME := MemoryUsage
 
-LOCAL_CERTIFICATE := platform
-LOCAL_JAVA_LIBRARIES := android.test.runner
+LOCAL_SDK_VERSION := 7
 
 include $(BUILD_PACKAGE)
 

@@ -225,9 +225,6 @@ public class Surface implements Parcelable {
     // non compatibility mode.
     private Matrix mCompatibleMatrix;
 
-    private int mWidth;
-    private int mHeight;
-
     private native void nativeCreate(SurfaceSession session, String name,
             int w, int h, int format, int flags)
             throws OutOfResourcesException;
@@ -333,8 +330,6 @@ public class Surface implements Parcelable {
         checkHeadless();
 
         mName = name;
-        mWidth = w;
-        mHeight = h;
         nativeCreate(session, name, w, h, format, flags);
 
         mCloseGuard.open("release");
@@ -543,7 +538,7 @@ public class Surface implements Parcelable {
 
     /** @hide */
     public void setPosition(int x, int y) {
-        nativeSetPosition(x, y);
+        nativeSetPosition((float)x, (float)y);
     }
 
     /** @hide */
@@ -553,19 +548,7 @@ public class Surface implements Parcelable {
 
     /** @hide */
     public void setSize(int w, int h) {
-        mWidth = w;
-        mHeight = h;
         nativeSetSize(w, h);
-    }
-
-    /** @hide */
-    public int getWidth() {
-        return mWidth;
-    }
-
-    /** @hide */
-    public int getHeight() {
-        return mHeight;
     }
 
     /** @hide */

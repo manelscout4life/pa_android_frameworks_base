@@ -44,9 +44,6 @@ import java.util.NoSuchElementException;
 final class DreamController {
     private static final String TAG = "DreamController";
 
-    // How long we wait for a newly bound dream to create the service connection
-    private static final int DREAM_CONNECTION_TIMEOUT = 5 * 1000;
-
     private final Context mContext;
     private final Handler mHandler;
     private final Listener mListener;
@@ -60,16 +57,6 @@ final class DreamController {
     private final Intent mCloseNotificationShadeIntent = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
 
     private DreamRecord mCurrentDream;
-
-    private final Runnable mStopUnconnectedDreamRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mCurrentDream != null && mCurrentDream.mBound && !mCurrentDream.mConnected) {
-                Slog.w(TAG, "Bound dream did not connect in the time allotted");
-                stopDream();
-            }
-        }
-    };
 
     public DreamController(Context context, Handler handler, Listener listener) {
         mContext = context;
@@ -129,7 +116,6 @@ final class DreamController {
         }
 
         mCurrentDream.mBound = true;
-        mHandler.postDelayed(mStopUnconnectedDreamRunnable, DREAM_CONNECTION_TIMEOUT);
     }
 
     public void stopDream() {
@@ -141,8 +127,6 @@ final class DreamController {
         mCurrentDream = null;
         Slog.i(TAG, "Stopping dream: name=" + oldDream.mName
                 + ", isTest=" + oldDream.mIsTest + ", userId=" + oldDream.mUserId);
-
-        mHandler.removeCallbacks(mStopUnconnectedDreamRunnable);
 
         if (oldDream.mSentStartBroadcast) {
             mContext.sendBroadcastAsUser(mDreamingStoppedIntent, UserHandle.ALL);
@@ -216,7 +200,6 @@ final class DreamController {
         public final int mUserId;
 
         public boolean mBound;
-        public boolean mConnected;
         public IDreamService mService;
         public boolean mSentStartBroadcast;
 
@@ -248,7 +231,6 @@ final class DreamController {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    mConnected = true;
                     if (mCurrentDream == DreamRecord.this && mService == null) {
                         attach(IDreamService.Stub.asInterface(service));
                     }

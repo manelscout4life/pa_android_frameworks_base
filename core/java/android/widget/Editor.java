@@ -36,8 +36,6 @@ import android.graphics.drawable.Drawable;
 import android.inputmethodservice.ExtractEditText;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.DynamicLayout;
@@ -188,8 +186,6 @@ public class Editor {
 
     private TextView mTextView;
 
-    private final UserDictionaryListener mUserDictionaryListener = new UserDictionaryListener();
-
     Editor(TextView textView) {
         mTextView = textView;
     }
@@ -294,7 +290,6 @@ public class Editor {
         mErrorWasChanged = true;
 
         if (mError == null) {
-            setErrorIcon(null);
             if (mErrorPopup != null) {
                 if (mErrorPopup.isShowing()) {
                     mErrorPopup.dismiss();
@@ -303,24 +298,21 @@ public class Editor {
                 mErrorPopup = null;
             }
 
-        } else {
+            setErrorIcon(null);
+        } else if (mTextView.isFocused()) {
+            showError();
             setErrorIcon(icon);
-            if (mTextView.isFocused()) {
-                showError();
-            }
         }
     }
 
     private void setErrorIcon(Drawable icon) {
-        Drawables dr = mTextView.mDrawables;
-        if (dr == null) {
-            mTextView.mDrawables = dr = new Drawables();
+        final Drawables dr = mTextView.mDrawables;
+        if (dr != null) {
+            mTextView.setCompoundDrawables(dr.mDrawableLeft, dr.mDrawableTop, icon,
+                    dr.mDrawableBottom);
+        } else {
+            mTextView.setCompoundDrawables(null, null, icon, null);
         }
-        dr.setErrorDrawable(icon, mTextView);
-
-        mTextView.resetResolvedDrawables();
-        mTextView.invalidate();
-        mTextView.requestLayout();
     }
 
     private void hideError() {
@@ -328,13 +320,15 @@ public class Editor {
             if (mErrorPopup.isShowing()) {
                 mErrorPopup.dismiss();
             }
+
+            setErrorIcon(null);
         }
 
         mShowErrorAfterAttach = false;
     }
 
     /**
-     * Returns the X offset to make the pointy top of the error point
+     * Returns the Y offset to make the pointy top of the error point
      * at the middle of the error icon.
      */
     private int getErrorX() {
@@ -345,23 +339,8 @@ public class Editor {
         final float scale = mTextView.getResources().getDisplayMetrics().density;
 
         final Drawables dr = mTextView.mDrawables;
-
-        final int layoutDirection = mTextView.getLayoutDirection();
-        int errorX;
-        int offset;
-        switch (layoutDirection) {
-            default:
-            case View.LAYOUT_DIRECTION_LTR:
-                offset = - (dr != null ? dr.mDrawableSizeRight : 0) / 2 + (int) (25 * scale + 0.5f);
-                errorX = mTextView.getWidth() - mErrorPopup.getWidth() -
-                        mTextView.getPaddingRight() + offset;
-                break;
-            case View.LAYOUT_DIRECTION_RTL:
-                offset = (dr != null ? dr.mDrawableSizeLeft : 0) / 2 - (int) (25 * scale + 0.5f);
-                errorX = mTextView.getPaddingLeft() + offset;
-                break;
-        }
-        return errorX;
+        return mTextView.getWidth() - mErrorPopup.getWidth() - mTextView.getPaddingRight() -
+                (dr != null ? dr.mDrawableSizeRight : 0) / 2 + (int) (25 * scale + 0.5f);
     }
 
     /**
@@ -378,27 +357,16 @@ public class Editor {
                 mTextView.getCompoundPaddingBottom() - compoundPaddingTop;
 
         final Drawables dr = mTextView.mDrawables;
-
-        final int layoutDirection = mTextView.getLayoutDirection();
-        int height;
-        switch (layoutDirection) {
-            default:
-            case View.LAYOUT_DIRECTION_LTR:
-                height = (dr != null ? dr.mDrawableHeightRight : 0);
-                break;
-            case View.LAYOUT_DIRECTION_RTL:
-                height = (dr != null ? dr.mDrawableHeightLeft : 0);
-                break;
-        }
-
-        int icontop = compoundPaddingTop + (vspace - height) / 2;
+        int icontop = compoundPaddingTop +
+                (vspace - (dr != null ? dr.mDrawableHeightRight : 0)) / 2;
 
         /*
          * The "2" is the distance between the point and the top edge
          * of the background.
          */
         final float scale = mTextView.getResources().getDisplayMetrics().density;
-        return icontop + height - mTextView.getHeight() - (int) (2 * scale + 0.5f);
+        return icontop + (dr != null ? dr.mDrawableHeightRight : 0) - mTextView.getHeight() -
+                (int) (2 * scale + 0.5f);
     }
 
     void createInputContentTypeIfNeeded() {
@@ -2605,11 +2573,6 @@ public class Editor {
                 Intent intent = new Intent(Settings.ACTION_USER_DICTIONARY_INSERT);
                 intent.putExtra("word", originalText);
                 intent.putExtra("locale", mTextView.getTextServicesLocale().toString());
-                // Put a listener to replace the original text with a word which the user
-                // modified in a user dictionary dialog.
-                mUserDictionaryListener.waitForUserDictionaryAdded(
-                        mTextView, originalText, spanStart, spanEnd);
-                intent.putExtra("listener", new Messenger(mUserDictionaryListener));
                 intent.setFlags(intent.getFlags() | Intent.FLAG_ACTIVITY_NEW_TASK);
                 mTextView.getContext().startActivity(intent);
                 // There is no way to know if the word was indeed added. Re-check.
@@ -3762,7 +3725,7 @@ public class Editor {
             super(v, width, height);
             mView = v;
             // Make sure the TextView has a background set as it will be used the first time it is
-            // shown and positioned. Initialized with below background, which should have
+            // shown and positionned. Initialized with below background, which should have
             // dimensions identical to the above version for this to work (and is more likely).
             mPopupInlineErrorBackgroundId = getResourceId(mPopupInlineErrorBackgroundId,
                     com.android.internal.R.styleable.Theme_errorMessageBackground);
@@ -3827,66 +3790,5 @@ public class Editor {
         boolean mSelectionModeChanged;
         boolean mContentChanged;
         int mChangedStart, mChangedEnd, mChangedDelta;
-    }
-
-    /**
-     * @hide
-     */
-    public static class UserDictionaryListener extends Handler {
-        public TextView mTextView;
-        public String mOriginalWord;
-        public int mWordStart;
-        public int mWordEnd;
-
-        public void waitForUserDictionaryAdded(
-                TextView tv, String originalWord, int spanStart, int spanEnd) {
-            mTextView = tv;
-            mOriginalWord = originalWord;
-            mWordStart = spanStart;
-            mWordEnd = spanEnd;
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            switch(msg.what) {
-                case 0: /* CODE_WORD_ADDED */
-                case 2: /* CODE_ALREADY_PRESENT */
-                    if (!(msg.obj instanceof Bundle)) {
-                        Log.w(TAG, "Illegal message. Abort handling onUserDictionaryAdded.");
-                        return;
-                    }
-                    final Bundle bundle = (Bundle)msg.obj;
-                    final String originalWord = bundle.getString("originalWord");
-                    final String addedWord = bundle.getString("word");
-                    onUserDictionaryAdded(originalWord, addedWord);
-                    return;
-                default:
-                    return;
-            }
-        }
-
-        private void onUserDictionaryAdded(String originalWord, String addedWord) {
-            if (TextUtils.isEmpty(mOriginalWord) || TextUtils.isEmpty(addedWord)) {
-                return;
-            }
-            if (mWordStart < 0 || mWordEnd >= mTextView.length()) {
-                return;
-            }
-            if (!mOriginalWord.equals(originalWord)) {
-                return;
-            }
-            if (originalWord.equals(addedWord)) {
-                return;
-            }
-            final Editable editable = (Editable) mTextView.getText();
-            final String currentWord = editable.toString().substring(mWordStart, mWordEnd);
-            if (!currentWord.equals(originalWord)) {
-                return;
-            }
-            mTextView.replaceText_internal(mWordStart, mWordEnd, addedWord);
-            // Move cursor at the end of the replaced word
-            final int newCursorPosition = mWordStart + addedWord.length();
-            mTextView.setCursorPosition_internal(newCursorPosition, newCursorPosition);
-        }
     }
 }

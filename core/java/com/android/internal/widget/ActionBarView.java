@@ -40,7 +40,6 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.text.Layout;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -50,6 +49,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -83,8 +83,7 @@ public class ActionBarView extends AbsActionBarView {
             ActionBar.DISPLAY_USE_LOGO |
             ActionBar.DISPLAY_HOME_AS_UP |
             ActionBar.DISPLAY_SHOW_CUSTOM |
-            ActionBar.DISPLAY_SHOW_TITLE |
-            ActionBar.DISPLAY_TITLE_MULTIPLE_LINES;
+            ActionBar.DISPLAY_SHOW_TITLE;
 
     private static final int DEFAULT_CUSTOM_GRAVITY = Gravity.START | Gravity.CENTER_VERTICAL;
     
@@ -101,7 +100,6 @@ public class ActionBarView extends AbsActionBarView {
     private TextView mTitleView;
     private TextView mSubtitleView;
     private View mTitleUpView;
-    private ViewGroup mUpGoerFive;
 
     private Spinner mSpinner;
     private LinearLayout mListNavLayout;
@@ -122,7 +120,6 @@ public class ActionBarView extends AbsActionBarView {
     private boolean mIncludeTabs;
     private boolean mIsCollapsable;
     private boolean mIsCollapsed;
-    private boolean mWasHomeEnabled; // Was it enabled before action view expansion?
 
     private MenuBuilder mOptionsMenu;
     
@@ -139,6 +136,10 @@ public class ActionBarView extends AbsActionBarView {
     View mExpandedActionView;
 
     Window.Callback mWindowCallback;
+
+    private final Rect mTempRect = new Rect();
+    private int mMaxHomeSlop;
+    private static final int MAX_HOME_SLOP = 32; // dp
 
     private final AdapterView.OnItemSelectedListener mNavItemSelectedListener =
             new AdapterView.OnItemSelectedListener() {
@@ -218,25 +219,14 @@ public class ActionBarView extends AbsActionBarView {
                 com.android.internal.R.styleable.ActionBar_homeLayout,
                 com.android.internal.R.layout.action_bar_home);
 
-        mUpGoerFive = (ViewGroup) inflater.inflate(
-                com.android.internal.R.layout.action_bar_up_container, this, false);
-        mHomeLayout = (HomeView) inflater.inflate(homeResId, mUpGoerFive, false);
+        mHomeLayout = (HomeView) inflater.inflate(homeResId, this, false);
 
-        mExpandedHomeLayout = (HomeView) inflater.inflate(homeResId, mUpGoerFive, false);
+        mExpandedHomeLayout = (HomeView) inflater.inflate(homeResId, this, false);
         mExpandedHomeLayout.setUp(true);
         mExpandedHomeLayout.setOnClickListener(mExpandedActionViewUpListener);
         mExpandedHomeLayout.setContentDescription(getResources().getText(
                 R.string.action_bar_up_description));
         
-        // This needs to highlight/be focusable on its own.
-        // TODO: Clean up the handoff between expanded/normal.
-        final Drawable upBackground = mUpGoerFive.getBackground();
-        if (upBackground != null) {
-            mExpandedHomeLayout.setBackground(upBackground.getConstantState().newDrawable());
-        }
-        mExpandedHomeLayout.setEnabled(true);
-        mExpandedHomeLayout.setFocusable(true);
-
         mTitleStyleRes = a.getResourceId(R.styleable.ActionBar_titleTextStyle, 0);
         mSubtitleStyleRes = a.getResourceId(R.styleable.ActionBar_subtitleTextStyle, 0);
         mProgressStyle = a.getResourceId(R.styleable.ActionBar_progressBarStyle, 0);
@@ -260,14 +250,16 @@ public class ActionBarView extends AbsActionBarView {
         a.recycle();
         
         mLogoNavItem = new ActionMenuItem(context, 0, android.R.id.home, 0, 0, mTitle);
-
-        mUpGoerFive.setOnClickListener(mUpClickListener);
-        mUpGoerFive.setClickable(true);
-        mUpGoerFive.setFocusable(true);
+        mHomeLayout.setOnClickListener(mUpClickListener);
+        mHomeLayout.setClickable(true);
+        mHomeLayout.setFocusable(true);
 
         if (getImportantForAccessibility() == View.IMPORTANT_FOR_ACCESSIBILITY_AUTO) {
             setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         }
+
+        mMaxHomeSlop =
+                (int) (MAX_HOME_SLOP * context.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     @Override
@@ -277,8 +269,8 @@ public class ActionBarView extends AbsActionBarView {
         mTitleView = null;
         mSubtitleView = null;
         mTitleUpView = null;
-        if (mTitleLayout != null && mTitleLayout.getParent() == mUpGoerFive) {
-            mUpGoerFive.removeView(mTitleLayout);
+        if (mTitleLayout != null && mTitleLayout.getParent() == this) {
+            removeView(mTitleLayout);
         }
         mTitleLayout = null;
         if ((mDisplayOptions & ActionBar.DISPLAY_SHOW_TITLE) != 0) {
@@ -559,34 +551,19 @@ public class ActionBarView extends AbsActionBarView {
     }
 
     public void setHomeButtonEnabled(boolean enable) {
-        setHomeButtonEnabled(enable, true);
-    }
-
-    private void setHomeButtonEnabled(boolean enable, boolean recordState) {
-        if (recordState) {
-            mWasHomeEnabled = enable;
-        }
-
-        if (mExpandedActionView != null) {
-            // There's an action view currently showing and we want to keep the state
-            // configured for the action view at the moment. If we needed to record the
-            // new state for later we will have done so above.
-            return;
-        }
-
-        mUpGoerFive.setEnabled(enable);
-        mUpGoerFive.setFocusable(enable);
+        mHomeLayout.setEnabled(enable);
+        mHomeLayout.setFocusable(enable);
         // Make sure the home button has an accurate content description for accessibility.
         if (!enable) {
-            mUpGoerFive.setContentDescription(null);
-            mUpGoerFive.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            mHomeLayout.setContentDescription(null);
+            mHomeLayout.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         } else {
-            mUpGoerFive.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+            mHomeLayout.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_AUTO);
             if ((mDisplayOptions & ActionBar.DISPLAY_HOME_AS_UP) != 0) {
-                mUpGoerFive.setContentDescription(mContext.getResources().getText(
+                mHomeLayout.setContentDescription(mContext.getResources().getText(
                         R.string.action_bar_up_description));
             } else {
-                mUpGoerFive.setContentDescription(mContext.getResources().getText(
+                mHomeLayout.setContentDescription(mContext.getResources().getText(
                         R.string.action_bar_home_description));
             }
         }
@@ -623,7 +600,7 @@ public class ActionBarView extends AbsActionBarView {
                 if ((options & ActionBar.DISPLAY_SHOW_TITLE) != 0) {
                     initTitle();
                 } else {
-                    mUpGoerFive.removeView(mTitleLayout);
+                    removeView(mTitleLayout);
                 }
             }
 
@@ -631,6 +608,8 @@ public class ActionBarView extends AbsActionBarView {
                     (ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_HOME)) != 0) {
                 final boolean homeAsUp = (mDisplayOptions & ActionBar.DISPLAY_HOME_AS_UP) != 0;
                 mTitleUpView.setVisibility(!showHome ? (homeAsUp ? VISIBLE : INVISIBLE) : GONE);
+                mTitleLayout.setEnabled(!showHome && homeAsUp);
+                mTitleLayout.setClickable(!showHome && homeAsUp);
             }
 
             if ((flagsChanged & ActionBar.DISPLAY_SHOW_CUSTOM) != 0 && mCustomNavView != null) {
@@ -641,17 +620,6 @@ public class ActionBarView extends AbsActionBarView {
                 }
             }
             
-            if (mTitleLayout != null &&
-                    (flagsChanged & ActionBar.DISPLAY_TITLE_MULTIPLE_LINES) != 0) {
-                if ((options & ActionBar.DISPLAY_TITLE_MULTIPLE_LINES) != 0) {
-                    mTitleView.setSingleLine(false);
-                    mTitleView.setMaxLines(2);
-                } else {
-                    mTitleView.setMaxLines(1);
-                    mTitleView.setSingleLine(true);
-                }
-            }
-
             requestLayout();
         } else {
             invalidate();
@@ -785,8 +753,7 @@ public class ActionBarView extends AbsActionBarView {
     protected void onFinishInflate() {
         super.onFinishInflate();
 
-        mUpGoerFive.addView(mHomeLayout, 0);
-        addView(mUpGoerFive);
+        addView(mHomeLayout);
 
         if (mCustomNavView != null && (mDisplayOptions & ActionBar.DISPLAY_SHOW_CUSTOM) != 0) {
             final ViewParent parent = mCustomNavView.getParent();
@@ -808,6 +775,8 @@ public class ActionBarView extends AbsActionBarView {
             mSubtitleView = (TextView) mTitleLayout.findViewById(R.id.action_bar_subtitle);
             mTitleUpView = (View) mTitleLayout.findViewById(R.id.up);
 
+            mTitleLayout.setOnClickListener(mUpClickListener);
+
             if (mTitleStyleRes != 0) {
                 mTitleView.setTextAppearance(mContext, mTitleStyleRes);
             }
@@ -827,9 +796,11 @@ public class ActionBarView extends AbsActionBarView {
             final boolean showHome = (mDisplayOptions & ActionBar.DISPLAY_SHOW_HOME) != 0;
             final boolean showTitleUp = !showHome;
             mTitleUpView.setVisibility(showTitleUp ? (homeAsUp ? VISIBLE : INVISIBLE) : GONE);
+            mTitleLayout.setEnabled(homeAsUp && showTitleUp);
+            mTitleLayout.setClickable(homeAsUp && showTitleUp);
         }
 
-        mUpGoerFive.addView(mTitleLayout);
+        addView(mTitleLayout);
         if (mExpandedActionView != null ||
                 (TextUtils.isEmpty(mTitle) && TextUtils.isEmpty(mSubtitle))) {
             // Don't show while in expanded mode or with empty text
@@ -849,28 +820,6 @@ public class ActionBarView extends AbsActionBarView {
         return mIsCollapsed;
     }
 
-    /**
-     * @return True if any characters in the title were truncated
-     */
-    public boolean isTitleTruncated() {
-        if (mTitleView == null) {
-            return false;
-        }
-
-        final Layout titleLayout = mTitleView.getLayout();
-        if (titleLayout == null) {
-            return false;
-        }
-
-        final int lineCount = titleLayout.getLineCount();
-        for (int i = 0; i < lineCount; i++) {
-            if (titleLayout.getEllipsisCount(i) > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         final int childCount = getChildCount();
@@ -879,16 +828,7 @@ public class ActionBarView extends AbsActionBarView {
             for (int i = 0; i < childCount; i++) {
                 final View child = getChildAt(i);
                 if (child.getVisibility() != GONE &&
-                        !(child == mMenuView && mMenuView.getChildCount() == 0) &&
-                        child != mUpGoerFive) {
-                    visibleChildren++;
-                }
-            }
-
-            final int upChildCount = mUpGoerFive.getChildCount();
-            for (int i = 0; i < upChildCount; i++) {
-                final View child = mUpGoerFive.getChildAt(i);
-                if (child.getVisibility() != GONE) {
+                        !(child == mMenuView && mMenuView.getChildCount() == 0)) {
                     visibleChildren++;
                 }
             }
@@ -932,8 +872,7 @@ public class ActionBarView extends AbsActionBarView {
 
         HomeView homeLayout = mExpandedActionView != null ? mExpandedHomeLayout : mHomeLayout;
 
-        int homeWidth = 0;
-        if (homeLayout.getVisibility() != GONE && homeLayout.getParent() == mUpGoerFive) {
+        if (homeLayout.getVisibility() != GONE) {
             final ViewGroup.LayoutParams lp = homeLayout.getLayoutParams();
             int homeWidthSpec;
             if (lp.width < 0) {
@@ -941,18 +880,10 @@ public class ActionBarView extends AbsActionBarView {
             } else {
                 homeWidthSpec = MeasureSpec.makeMeasureSpec(lp.width, MeasureSpec.EXACTLY);
             }
-
-            /*
-             * This is a little weird.
-             * We're only measuring the *home* affordance within the Up container here
-             * on purpose, because we want to give the available space to all other views before
-             * the title text. We'll remeasure the whole up container again later.
-             */
             homeLayout.measure(homeWidthSpec, exactHeightSpec);
-            homeWidth = homeLayout.getMeasuredWidth();
-            final int homeOffsetWidth = homeWidth + homeLayout.getStartOffset();
-            availableWidth = Math.max(0, availableWidth - homeOffsetWidth);
-            leftOfCenter = Math.max(0, availableWidth - homeOffsetWidth);
+            final int homeWidth = homeLayout.getMeasuredWidth() + homeLayout.getStartOffset();
+            availableWidth = Math.max(0, availableWidth - homeWidth);
+            leftOfCenter = Math.max(0, availableWidth - homeWidth);
         }
         
         if (mMenuView != null && mMenuView.getParent() == this) {
@@ -1054,13 +985,9 @@ public class ActionBarView extends AbsActionBarView {
             availableWidth -= horizontalMargin + customView.getMeasuredWidth();
         }
 
-        /*
-         * Measure the whole up container now, allowing for the full home+title sections.
-         * (This will re-measure the home view.)
-         */
-        availableWidth = measureChildView(mUpGoerFive, availableWidth + homeWidth,
-                MeasureSpec.makeMeasureSpec(mContentHeight, MeasureSpec.EXACTLY), 0);
-        if (mTitleLayout != null) {
+        if (mExpandedActionView == null && showTitle) {
+            availableWidth = measureChildView(mTitleLayout, availableWidth,
+                    MeasureSpec.makeMeasureSpec(mContentHeight, MeasureSpec.EXACTLY), 0);
             leftOfCenter = Math.max(0, leftOfCenter - mTitleLayout.getMeasuredWidth());
         }
 
@@ -1107,17 +1034,24 @@ public class ActionBarView extends AbsActionBarView {
         final int y = getPaddingTop();
 
         HomeView homeLayout = mExpandedActionView != null ? mExpandedHomeLayout : mHomeLayout;
-        final int startOffset = homeLayout.getVisibility() != GONE &&
-                homeLayout.getParent() == mUpGoerFive ? homeLayout.getStartOffset() : 0;
-
-        // Position the up container based on where the edge of the home layout should go.
-        x += positionChild(mUpGoerFive,
-                next(x, startOffset, isLayoutRtl), y, contentHeight, isLayoutRtl);
-        x = next(x, startOffset, isLayoutRtl);
+        boolean needsTouchDelegate = false;
+        int homeSlop = mMaxHomeSlop;
+        int homeRight = 0;
+        if (homeLayout.getVisibility() != GONE) {
+            final int startOffset = homeLayout.getStartOffset();
+            x += positionChild(homeLayout,
+                            next(x, startOffset, isLayoutRtl), y, contentHeight, isLayoutRtl);
+            x = next(x, startOffset, isLayoutRtl);
+            needsTouchDelegate = homeLayout == mHomeLayout;
+            homeRight = x;
+        }
 
         if (mExpandedActionView == null) {
             final boolean showTitle = mTitleLayout != null && mTitleLayout.getVisibility() != GONE &&
                     (mDisplayOptions & ActionBar.DISPLAY_SHOW_TITLE) != 0;
+            if (showTitle) {
+                x += positionChild(mTitleLayout, x, y, contentHeight, isLayoutRtl);
+            }
 
             switch (mNavigationMode) {
                 case ActionBar.NAVIGATION_MODE_STANDARD:
@@ -1127,6 +1061,7 @@ public class ActionBarView extends AbsActionBarView {
                         if (showTitle) {
                             x = next(x, mItemPadding, isLayoutRtl);
                         }
+                        homeSlop = Math.min(homeSlop, Math.max(x - homeRight, 0));
                         x += positionChild(mListNavLayout, x, y, contentHeight, isLayoutRtl);
                         x = next(x, mItemPadding, isLayoutRtl);
                     }
@@ -1134,6 +1069,7 @@ public class ActionBarView extends AbsActionBarView {
                 case ActionBar.NAVIGATION_MODE_TABS:
                     if (mTabScrollView != null) {
                         if (showTitle) x = next(x, mItemPadding, isLayoutRtl);
+                        homeSlop = Math.min(homeSlop, Math.max(x - homeRight, 0));
                         x += positionChild(mTabScrollView, x, y, contentHeight, isLayoutRtl);
                         x = next(x, mItemPadding, isLayoutRtl);
                     }
@@ -1238,6 +1174,7 @@ public class ActionBarView extends AbsActionBarView {
             final int customWidth = customView.getMeasuredWidth();
             customView.layout(xpos, ypos, xpos + customWidth,
                     ypos + customView.getMeasuredHeight());
+            homeSlop = Math.min(homeSlop, Math.max(xpos - homeRight, 0));
             x = next(x, customWidth, isLayoutRtl);
         }
 
@@ -1246,6 +1183,14 @@ public class ActionBarView extends AbsActionBarView {
             final int halfProgressHeight = mProgressView.getMeasuredHeight() / 2;
             mProgressView.layout(mProgressBarPadding, -halfProgressHeight,
                     mProgressBarPadding + mProgressView.getMeasuredWidth(), halfProgressHeight);
+        }
+
+        if (needsTouchDelegate) {
+            mTempRect.set(homeLayout.getLeft(), homeLayout.getTop(),
+                    homeLayout.getRight() + homeSlop, homeLayout.getBottom());
+            setTouchDelegate(new TouchDelegate(mTempRect, homeLayout));
+        } else {
+            setTouchDelegate(null);
         }
     }
 
@@ -1546,15 +1491,14 @@ public class ActionBarView extends AbsActionBarView {
             if (mExpandedActionView.getParent() != ActionBarView.this) {
                 addView(mExpandedActionView);
             }
-            if (mExpandedHomeLayout.getParent() != mUpGoerFive) {
-                mUpGoerFive.addView(mExpandedHomeLayout);
+            if (mExpandedHomeLayout.getParent() != ActionBarView.this) {
+                addView(mExpandedHomeLayout);
             }
             mHomeLayout.setVisibility(GONE);
             if (mTitleLayout != null) mTitleLayout.setVisibility(GONE);
             if (mTabScrollView != null) mTabScrollView.setVisibility(GONE);
             if (mSpinner != null) mSpinner.setVisibility(GONE);
             if (mCustomNavView != null) mCustomNavView.setVisibility(GONE);
-            setHomeButtonEnabled(false, false);
             requestLayout();
             item.setActionViewExpanded(true);
 
@@ -1574,7 +1518,7 @@ public class ActionBarView extends AbsActionBarView {
             }
 
             removeView(mExpandedActionView);
-            mUpGoerFive.removeView(mExpandedHomeLayout);
+            removeView(mExpandedHomeLayout);
             mExpandedActionView = null;
             if ((mDisplayOptions & ActionBar.DISPLAY_SHOW_HOME) != 0) {
                 mHomeLayout.setVisibility(VISIBLE);
@@ -1597,7 +1541,6 @@ public class ActionBarView extends AbsActionBarView {
             }
             mExpandedHomeLayout.setIcon(null);
             mCurrentExpandedItem = null;
-            setHomeButtonEnabled(mWasHomeEnabled); // Set by expandItemActionView above
             requestLayout();
             item.setActionViewExpanded(false);
 

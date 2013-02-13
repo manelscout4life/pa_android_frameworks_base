@@ -339,7 +339,6 @@ status_t OpenGLRenderer::invokeFunctors(Rect& dirty) {
     size_t count = mFunctors.size();
 
     if (count > 0) {
-        interrupt();
         SortedVector<Functor*> functors(mFunctors);
         mFunctors.clear();
 
@@ -366,7 +365,10 @@ status_t OpenGLRenderer::invokeFunctors(Rect& dirty) {
                 mFunctors.add(f);
             }
         }
-        resume();
+        // protect against functors binding to other buffers
+        mCaches.unbindMeshBuffer();
+        mCaches.unbindIndicesBuffer();
+        mCaches.activeTexture(0);
     }
 
     return result;

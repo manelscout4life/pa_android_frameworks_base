@@ -102,26 +102,20 @@ final class RampAnimator<T> {
             final long frameTimeNanos = mChoreographer.getFrameTimeNanos();
             final float timeDelta = (frameTimeNanos - mLastFrameTimeNanos)
                     * 0.000000001f;
+            final float amount = timeDelta * mRate / ValueAnimator.getDurationScale();
             mLastFrameTimeNanos = frameTimeNanos;
 
             // Advance the animated value towards the target at the specified rate
             // and clamp to the target. This gives us the new current value but
             // we keep the animated value around to allow for fractional increments
             // towards the target.
-            final float scale = ValueAnimator.getDurationScale();
-            if (scale == 0) {
-                // Animation off.
-                mAnimatedValue = mTargetValue;
+            int oldCurrentValue = mCurrentValue;
+            if (mTargetValue > mCurrentValue) {
+                mAnimatedValue = Math.min(mAnimatedValue + amount, mTargetValue);
             } else {
-                final float amount = timeDelta * mRate / scale;
-                if (mTargetValue > mCurrentValue) {
-                    mAnimatedValue = Math.min(mAnimatedValue + amount, mTargetValue);
-                } else {
-                    mAnimatedValue = Math.max(mAnimatedValue - amount, mTargetValue);
-                }
+                mAnimatedValue = Math.max(mAnimatedValue - amount, mTargetValue);
             }
-            final int oldCurrentValue = mCurrentValue;
-            mCurrentValue = Math.round(mAnimatedValue);
+            mCurrentValue = (int)Math.round(mAnimatedValue);
 
             if (oldCurrentValue != mCurrentValue) {
                 mProperty.setValue(mObject, mCurrentValue);

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
@@ -30,10 +29,9 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.Process;
 import android.os.RemoteException;
-import android.os.UserHandle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.MeasureSpec;
@@ -42,7 +40,6 @@ import android.widget.RemoteViews.OnClickHandler;
 
 import com.android.internal.widget.IRemoteViewsAdapterConnection;
 import com.android.internal.widget.IRemoteViewsFactory;
-import com.android.internal.widget.LockPatternUtils;
 
 /**
  * An adapter to a RemoteViewsService which fetches and caches RemoteViews
@@ -90,15 +87,13 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
     private Handler mMainQueue;
 
     // We cache the FixedSizeRemoteViewsCaches across orientation. These are the related data
-    // structures; 
-    private static final HashMap<RemoteViewsCacheKey,
-            FixedSizeRemoteViewsCache> sCachedRemoteViewsCaches
-            = new HashMap<RemoteViewsCacheKey,
+    // structures;
+    private static final HashMap<Pair<Intent.FilterComparison, Integer>, FixedSizeRemoteViewsCache>
+            sCachedRemoteViewsCaches = new HashMap<Pair<Intent.FilterComparison, Integer>,
                     FixedSizeRemoteViewsCache>();
-    private static final HashMap<RemoteViewsCacheKey, Runnable>
-            sRemoteViewsCacheRemoveRunnables
-            = new HashMap<RemoteViewsCacheKey, Runnable>();
-
+    private static final HashMap<Pair<Intent.FilterComparison, Integer>, Runnable>
+            sRemoteViewsCacheRemoveRunnables = new HashMap<Pair<Intent.FilterComparison, Integer>,
+            Runnable>();
     private static HandlerThread sCacheRemovalThread;
     private static Handler sCacheRemovalQueue;
 
@@ -110,8 +105,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
     // Used to indicate to the AdapterView that it can use this Adapter immediately after
     // construction (happens when we have a cached FixedSizeRemoteViewsCache).
     private boolean mDataReady = false;
-
-    int mUserId;
 
     /**
      * An interface for the RemoteAdapter to notify other classes when adapters
@@ -153,16 +146,8 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
         public synchronized void bind(Context context, int appWidgetId, Intent intent) {
             if (!mIsConnecting) {
                 try {
-                    RemoteViewsAdapter adapter;
                     final AppWidgetManager mgr = AppWidgetManager.getInstance(context);
-                    if (Process.myUid() == Process.SYSTEM_UID
-                            && (adapter = mAdapter.get()) != null) {
-                        mgr.bindRemoteViewsService(appWidgetId, intent, asBinder(),
-                                new UserHandle(adapter.mUserId));
-                    } else {
-                        mgr.bindRemoteViewsService(appWidgetId, intent, asBinder(),
-                                Process.myUserHandle());
-                    }
+                    mgr.bindRemoteViewsService(appWidgetId, intent, asBinder());
                     mIsConnecting = true;
                 } catch (Exception e) {
                     Log.e("RemoteViewsAdapterServiceConnection", "bind(): " + e.getMessage());
@@ -174,15 +159,8 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
 
         public synchronized void unbind(Context context, int appWidgetId, Intent intent) {
             try {
-                RemoteViewsAdapter adapter;
                 final AppWidgetManager mgr = AppWidgetManager.getInstance(context);
-                if (Process.myUid() == Process.SYSTEM_UID
-                        && (adapter = mAdapter.get()) != null) {
-                    mgr.unbindRemoteViewsService(appWidgetId, intent,
-                            new UserHandle(adapter.mUserId));
-                } else {
-                    mgr.unbindRemoteViewsService(appWidgetId, intent, Process.myUserHandle());
-                }
+                mgr.unbindRemoteViewsService(appWidgetId, intent);
                 mIsConnecting = false;
             } catch (Exception e) {
                 Log.e("RemoteViewsAdapterServiceConnection", "unbind(): " + e.getMessage());
@@ -318,13 +296,9 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
      */
     private class RemoteViewsFrameLayoutRefSet {
         private HashMap<Integer, LinkedList<RemoteViewsFrameLayout>> mReferences;
-        private HashMap<RemoteViewsFrameLayout, LinkedList<RemoteViewsFrameLayout>>
-                mViewToLinkedList;
 
         public RemoteViewsFrameLayoutRefSet() {
             mReferences = new HashMap<Integer, LinkedList<RemoteViewsFrameLayout>>();
-            mViewToLinkedList =
-                    new HashMap<RemoteViewsFrameLayout, LinkedList<RemoteViewsFrameLayout>>();
         }
 
         /**
@@ -341,7 +315,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
                 refs = new LinkedList<RemoteViewsFrameLayout>();
                 mReferences.put(pos, refs);
             }
-            mViewToLinkedList.put(layout, refs);
 
             // Add the references to the list
             refs.add(layout);
@@ -360,23 +333,11 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
                 final LinkedList<RemoteViewsFrameLayout> refs = mReferences.get(pos);
                 for (final RemoteViewsFrameLayout ref : refs) {
                     ref.onRemoteViewsLoaded(view, mRemoteViewsOnClickHandler);
-                    if (mViewToLinkedList.containsKey(ref)) {
-                        mViewToLinkedList.remove(ref);
-                    }
                 }
                 refs.clear();
+
                 // Remove this set from the original mapping
                 mReferences.remove(pos);
-            }
-        }
-
-        /**
-         * We need to remove views from this set if they have been recycled by the AdapterView.
-         */
-        public void removeView(RemoteViewsFrameLayout rvfl) {
-            if (mViewToLinkedList.containsKey(rvfl)) {
-                mViewToLinkedList.get(rvfl).remove(rvfl);
-                mViewToLinkedList.remove(rvfl);
             }
         }
 
@@ -387,7 +348,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
             // We currently just clear the references, and leave all the previous layouts returned
             // in their default state of the loading view.
             mReferences.clear();
-            mViewToLinkedList.clear();
         }
     }
 
@@ -791,33 +751,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
         }
     }
 
-    static class RemoteViewsCacheKey {
-        final Intent.FilterComparison filter;
-        final int widgetId;
-        final int userId;
-
-        RemoteViewsCacheKey(Intent.FilterComparison filter, int widgetId, int userId) {
-            this.filter = filter;
-            this.widgetId = widgetId;
-            this.userId = userId;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof RemoteViewsCacheKey)) {
-                return false;
-            }
-            RemoteViewsCacheKey other = (RemoteViewsCacheKey) o;
-            return other.filter.equals(filter) && other.widgetId == widgetId
-                    && other.userId == userId;
-        }
-
-        @Override
-        public int hashCode() {
-            return (filter == null ? 0 : filter.hashCode()) ^ (widgetId << 2) ^ (userId << 10);
-        }
-    }
-
     public RemoteViewsAdapter(Context context, Intent intent, RemoteAdapterConnectionCallback callback) {
         mContext = context;
         mIntent = intent;
@@ -828,11 +761,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
         }
         mRequestedViews = new RemoteViewsFrameLayoutRefSet();
 
-        if (Process.myUid() == Process.SYSTEM_UID) {
-            mUserId = new LockPatternUtils(context).getCurrentUser();
-        } else {
-            mUserId = UserHandle.myUserId();
-        }
         // Strip the previously injected app widget id from service intent
         if (intent.hasExtra(RemoteViews.EXTRA_REMOTEADAPTER_APPWIDGET_ID)) {
             intent.removeExtra(RemoteViews.EXTRA_REMOTEADAPTER_APPWIDGET_ID);
@@ -854,8 +782,8 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
         mCallback = new WeakReference<RemoteAdapterConnectionCallback>(callback);
         mServiceConnection = new RemoteViewsAdapterServiceConnection(this);
 
-        RemoteViewsCacheKey key = new RemoteViewsCacheKey(new Intent.FilterComparison(mIntent),
-                mAppWidgetId, mUserId);
+        Pair<Intent.FilterComparison, Integer> key = new Pair<Intent.FilterComparison, Integer>
+                (new Intent.FilterComparison(mIntent), mAppWidgetId);
 
         synchronized(sCachedRemoteViewsCaches) {
             if (sCachedRemoteViewsCaches.containsKey(key)) {
@@ -896,8 +824,8 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
     }
 
     public void saveRemoteViewsCache() {
-        final RemoteViewsCacheKey key = new RemoteViewsCacheKey(
-                new Intent.FilterComparison(mIntent), mAppWidgetId, mUserId);
+        final Pair<Intent.FilterComparison, Integer> key = new Pair<Intent.FilterComparison,
+                Integer> (new Intent.FilterComparison(mIntent), mAppWidgetId);
 
         synchronized(sCachedRemoteViewsCaches) {
             // If we already have a remove runnable posted for this key, remove it.
@@ -1019,7 +947,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
         long itemId = 0;
         try {
             remoteViews = factory.getViewAt(position);
-            remoteViews.setUser(new UserHandle(mUserId));
             itemId = factory.getItemId(position);
         } catch (RemoteException e) {
             Log.e(TAG, "Error in updateRemoteViews(" + position + "): " + e.getMessage());
@@ -1151,10 +1078,6 @@ public class RemoteViewsAdapter extends BaseAdapter implements Handler.Callback 
             boolean isInCache = mCache.containsRemoteViewAt(position);
             boolean isConnected = mServiceConnection.isConnected();
             boolean hasNewItems = false;
-
-            if (convertView != null && convertView instanceof RemoteViewsFrameLayout) {
-                mRequestedViews.removeView((RemoteViewsFrameLayout) convertView);
-            }
 
             if (!isInCache && !isConnected) {
                 // Requesting bind service will trigger a super.notifyDataSetChanged(), which will

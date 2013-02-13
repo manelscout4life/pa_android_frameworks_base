@@ -281,7 +281,7 @@ public class Presentation extends Dialog {
     private boolean isConfigurationStillValid() {
         DisplayMetrics dm = new DisplayMetrics();
         mDisplay.getMetrics(dm);
-        return dm.equalsPhysical(getResources().getDisplayMetrics());
+        return dm.equals(getResources().getDisplayMetrics());
     }
 
     private static Context createPresentationContext(

@@ -23,7 +23,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.ServiceManager;
-import android.os.UserHandle;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
@@ -239,7 +238,7 @@ public class AppWidgetManager {
     public static final String EXTRA_CUSTOM_SORT = "customSort";
 
     /**
-     * A sentinel value that the AppWidget manager will never return as a appWidgetId.
+     * A sentiel value that the AppWidget manager will never return as a appWidgetId.
      */
     public static final int INVALID_APPWIDGET_ID = 0;
 
@@ -545,19 +544,8 @@ public class AppWidgetManager {
      * Return a list of the AppWidget providers that are currently installed.
      */
     public List<AppWidgetProviderInfo> getInstalledProviders() {
-        return getInstalledProviders(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN);
-    }
-
-    /**
-     * Return a list of the AppWidget providers that are currently installed.
-     *
-     * @param categoryFilter Will only return providers which register as any of the specified
-     *        specified categories. See {@link AppWidgetProviderInfo#widgetCategory}.
-     * @hide
-     */
-    public List<AppWidgetProviderInfo> getInstalledProviders(int categoryFilter) {
         try {
-            List<AppWidgetProviderInfo> providers = sService.getInstalledProviders(categoryFilter);
+            List<AppWidgetProviderInfo> providers = sService.getInstalledProviders();
             for (AppWidgetProviderInfo info : providers) {
                 // Converting complex to dp.
                 info.minWidth =
@@ -750,14 +738,11 @@ public class AppWidgetManager {
      * @param intent        The intent of the service which will be providing the data to the
      *                      RemoteViewsAdapter.
      * @param connection    The callback interface to be notified when a connection is made or lost.
-     * @param userHandle    The user to bind to.
      * @hide
      */
-    public void bindRemoteViewsService(int appWidgetId, Intent intent, IBinder connection,
-            UserHandle userHandle) {
+    public void bindRemoteViewsService(int appWidgetId, Intent intent, IBinder connection) {
         try {
-            sService.bindRemoteViewsService(appWidgetId, intent, connection,
-                    userHandle.getIdentifier());
+            sService.bindRemoteViewsService(appWidgetId, intent, connection);
         }
         catch (RemoteException e) {
             throw new RuntimeException("system server dead?", e);
@@ -773,12 +758,11 @@ public class AppWidgetManager {
      * @param appWidgetId   The AppWidget instance for which to bind the RemoteViewsService.
      * @param intent        The intent of the service which will be providing the data to the
      *                      RemoteViewsAdapter.
-     * @param userHandle    The user to unbind from.
      * @hide
      */
-    public void unbindRemoteViewsService(int appWidgetId, Intent intent, UserHandle userHandle) {
+    public void unbindRemoteViewsService(int appWidgetId, Intent intent) {
         try {
-            sService.unbindRemoteViewsService(appWidgetId, intent, userHandle.getIdentifier());
+            sService.unbindRemoteViewsService(appWidgetId, intent);
         }
         catch (RemoteException e) {
             throw new RuntimeException("system server dead?", e);

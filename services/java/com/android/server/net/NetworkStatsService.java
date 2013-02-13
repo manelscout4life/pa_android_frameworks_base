@@ -115,7 +115,6 @@ import android.util.Slog;
 import android.util.SparseIntArray;
 import android.util.TrustedTime;
 
-import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.FileRotator;
 import com.android.internal.util.IndentingPrintWriter;
@@ -166,7 +165,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
 
     private IConnectivityManager mConnManager;
 
-    @VisibleForTesting
+    // @VisibleForTesting
     public static final String ACTION_NETWORK_STATS_POLL =
             "com.android.server.action.NETWORK_STATS_POLL";
     public static final String ACTION_NETWORK_STATS_UPDATED =
@@ -903,7 +902,7 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
                 ident.add(NetworkIdentity.buildNetworkIdentity(mContext, state));
 
                 // remember any ifaces associated with mobile networks
-                if (isNetworkTypeMobile(state.networkInfo.getType()) && iface != null) {
+                if (isNetworkTypeMobile(state.networkInfo.getType())) {
                     if (!contains(mMobileIfaces, iface)) {
                         mMobileIfaces = appendElement(String.class, mMobileIfaces, iface);
                     }

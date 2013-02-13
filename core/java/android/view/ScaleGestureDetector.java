@@ -259,8 +259,6 @@ public class ScaleGestureDetector {
             mInputEventConsistencyVerifier.onTouchEvent(event, 0);
         }
 
-        mCurrTime = event.getEventTime();
-
         final int action = event.getActionMasked();
 
         final boolean streamComplete = action == MotionEvent.ACTION_UP ||
@@ -343,7 +341,6 @@ public class ScaleGestureDetector {
             mPrevSpanX = mCurrSpanX = spanX;
             mPrevSpanY = mCurrSpanY = spanY;
             mPrevSpan = mCurrSpan = span;
-            mPrevTime = mCurrTime;
             mInProgress = mListener.onScaleBegin(this);
         }
 
@@ -362,7 +359,6 @@ public class ScaleGestureDetector {
                 mPrevSpanX = mCurrSpanX;
                 mPrevSpanY = mCurrSpanY;
                 mPrevSpan = mCurrSpan;
-                mPrevTime = mCurrTime;
             }
         }
 

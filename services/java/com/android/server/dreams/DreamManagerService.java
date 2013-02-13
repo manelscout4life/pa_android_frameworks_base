@@ -25,7 +25,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -39,8 +38,6 @@ import android.util.Slog;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
 
 import libcore.util.Objects;
 
@@ -50,7 +47,7 @@ import libcore.util.Objects;
  * @hide
  */
 public final class DreamManagerService extends IDreamManager.Stub {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String TAG = "DreamManagerService";
 
     private final Object mLock = new Object();
@@ -282,37 +279,7 @@ public final class DreamManagerService extends IDreamManager.Stub {
         String names = Settings.Secure.getStringForUser(mContext.getContentResolver(),
                 Settings.Secure.SCREENSAVER_COMPONENTS,
                 userId);
-        ComponentName[] components = componentsFromString(names);
-
-        // first, ensure components point to valid services
-        List<ComponentName> validComponents = new ArrayList<ComponentName>();
-        if (components != null) {
-            for (ComponentName component : components) {
-                if (serviceExists(component)) {
-                    validComponents.add(component);
-                } else {
-                    Slog.w(TAG, "Dream " + component + " does not exist");
-                }
-            }
-        }
-
-        // fallback to the default dream component if necessary
-        if (validComponents.isEmpty()) {
-            ComponentName defaultDream = getDefaultDreamComponent();
-            if (defaultDream != null) {
-                Slog.w(TAG, "Falling back to default dream " + defaultDream);
-                validComponents.add(defaultDream);
-            }
-        }
-        return validComponents.toArray(new ComponentName[validComponents.size()]);
-    }
-
-    private boolean serviceExists(ComponentName name) {
-        try {
-            return name != null && mContext.getPackageManager().getServiceInfo(name, 0) != null;
-        } catch (NameNotFoundException e) {
-            return false;
-        }
+        return names == null ? null : componentsFromString(names);
     }
 
     private void startDreamLocked(final ComponentName name,
@@ -325,7 +292,7 @@ public final class DreamManagerService extends IDreamManager.Stub {
 
         stopDreamLocked();
 
-        if (DEBUG) Slog.i(TAG, "Entering dreamland.");
+        Slog.i(TAG, "Entering dreamland.");
 
         final Binder newToken = new Binder();
         mCurrentDreamToken = newToken;
@@ -343,7 +310,7 @@ public final class DreamManagerService extends IDreamManager.Stub {
 
     private void stopDreamLocked() {
         if (mCurrentDreamToken != null) {
-            if (DEBUG) Slog.i(TAG, "Leaving dreamland.");
+            Slog.i(TAG, "Leaving dreamland.");
 
             cleanupDreamLocked();
 
@@ -385,9 +352,6 @@ public final class DreamManagerService extends IDreamManager.Stub {
     }
 
     private static ComponentName[] componentsFromString(String names) {
-        if (names == null) {
-            return null;
-        }
         String[] namesArray = names.split(",");
         ComponentName[] componentNames = new ComponentName[namesArray.length];
         for (int i = 0; i < namesArray.length; i++) {

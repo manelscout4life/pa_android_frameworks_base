@@ -21,7 +21,14 @@ import android.os.Bundle;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.renderscript.ScriptC;
+import android.renderscript.RenderScript;
+import android.renderscript.Type;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.Script;
 import android.view.SurfaceView;
+import android.view.SurfaceHolder;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
@@ -30,8 +37,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.view.View;
 import android.util.Log;
+import java.lang.Math;
 
 import android.os.Environment;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -40,57 +52,12 @@ import java.io.IOException;
 public class ImageProcessingActivity extends Activity
                                        implements SeekBar.OnSeekBarChangeListener {
     private final String TAG = "Img";
-    public final String RESULT_FILE = "image_processing_result.csv";
-
-    /**
-     * Define enum type for test names
-     */
-    public enum TestName {
-        LEVELS_VEC3_RELAXED ("Levels Vec3 Relaxed"),
-        LEVELS_VEC4_RELAXED ("Levels Vec4 Relaxed"),
-        LEVELS_VEC3_FULL ("Levels Vec3 Full"),
-        LEVELS_VEC4_FULL ("Levels Vec4 Full"),
-        BLUR_RADIUS_25 ("Blur radius 25"),
-        INTRINSIC_BLUE_RADIUS_25 ("Intrinsic Blur radius 25"),
-        GREYSCALE ("Greyscale"),
-        GRAIN ("Grain"),
-        FISHEYE_FULL ("Fisheye Full"),
-        FISHEYE_RELAXED ("Fisheye Relaxed"),
-        FISHEYE_APPROXIMATE_FULL ("Fisheye Approximate Full"),
-        FISHEYE_APPROXIMATE_RELAXED ("Fisheye Approximate Relaxed"),
-        VIGNETTE_FULL ("Vignette Full"),
-        VIGNETTE_RELAXED ("Vignette Relaxed"),
-        VIGNETTE_APPROXIMATE_FULL ("Vignette Approximate Full"),
-        VIGNETTE_APPROXIMATE_RELAXED ("Vignette Approximate Relaxed"),
-        GROUP_TEST_EMULATED ("Group Test (emulated)"),
-        GROUP_TEST_NATIVE ("Group Test (native)"),
-        CONVOLVE_3X3 ("Convolve 3x3"),
-        INTRINSICS_CONVOLVE_3X3 ("Intrinsics Convolve 3x3"),
-        COLOR_MATRIX ("ColorMatrix"),
-        INTRINSICS_COLOR_MATRIX ("Intrinsics ColorMatrix"),
-        INTRINSICS_COLOR_MATRIX_GREY ("Intrinsics ColorMatrix Grey"),
-        COPY ("Copy"),
-        CROSS_PROCESS_USING_LUT ("CrossProcess (using LUT)"),
-        CONVOLVE_5X5 ("Convolve 5x5"),
-        INTRINSICS_CONVOLVE_5X5 ("Intrinsics Convolve 5x5"),
-        MANDELBROT ("Mandelbrot"),
-        INTRINSICS_BLEND ("Intrinsics Blend");
-
-        private final String name;
-
-        private TestName(String s) {
-            name = s;
-        }
-
-        // return quoted string as displayed test name
-        public String toString() {
-            return name;
-        }
-    }
+    private final String RESULT_FILE = "image_processing_result.csv";
 
     Bitmap mBitmapIn;
     Bitmap mBitmapIn2;
     Bitmap mBitmapOut;
+    String mTestNames[];
 
     private Spinner mSpinner;
     private SeekBar mBar1;
@@ -173,96 +140,96 @@ public class ImageProcessingActivity extends Activity
     }
 
 
-    void changeTest(TestName testName) {
+    void changeTest(int testID) {
         if (mTest != null) {
             mTest.destroy();
         }
-        switch(testName) {
-        case LEVELS_VEC3_RELAXED:
+        switch(testID) {
+        case 0:
             mTest = new LevelsV4(false, false);
             break;
-        case LEVELS_VEC4_RELAXED:
+        case 1:
             mTest = new LevelsV4(false, true);
             break;
-        case LEVELS_VEC3_FULL:
+        case 2:
             mTest = new LevelsV4(true, false);
             break;
-        case LEVELS_VEC4_FULL:
+        case 3:
             mTest = new LevelsV4(true, true);
             break;
-        case BLUR_RADIUS_25:
+        case 4:
             mTest = new Blur25(false);
             break;
-        case INTRINSIC_BLUE_RADIUS_25:
+        case 5:
             mTest = new Blur25(true);
             break;
-        case GREYSCALE:
+        case 6:
             mTest = new Greyscale();
             break;
-        case GRAIN:
+        case 7:
             mTest = new Grain();
             break;
-        case FISHEYE_FULL:
+        case 8:
             mTest = new Fisheye(false, false);
             break;
-        case FISHEYE_RELAXED:
+        case 9:
             mTest = new Fisheye(false, true);
             break;
-        case FISHEYE_APPROXIMATE_FULL:
+        case 10:
             mTest = new Fisheye(true, false);
             break;
-        case FISHEYE_APPROXIMATE_RELAXED:
+        case 11:
             mTest = new Fisheye(true, true);
             break;
-        case VIGNETTE_FULL:
+        case 12:
             mTest = new Vignette(false, false);
             break;
-        case VIGNETTE_RELAXED:
+        case 13:
             mTest = new Vignette(false, true);
             break;
-        case VIGNETTE_APPROXIMATE_FULL:
+        case 14:
             mTest = new Vignette(true, false);
             break;
-        case VIGNETTE_APPROXIMATE_RELAXED:
+        case 15:
             mTest = new Vignette(true, true);
             break;
-        case GROUP_TEST_EMULATED:
+        case 16:
             mTest = new GroupTest(false);
             break;
-        case GROUP_TEST_NATIVE:
+        case 17:
             mTest = new GroupTest(true);
             break;
-        case CONVOLVE_3X3:
+        case 18:
             mTest = new Convolve3x3(false);
             break;
-        case INTRINSICS_CONVOLVE_3X3:
+        case 19:
             mTest = new Convolve3x3(true);
             break;
-        case COLOR_MATRIX:
+        case 20:
             mTest = new ColorMatrix(false, false);
             break;
-        case INTRINSICS_COLOR_MATRIX:
+        case 21:
             mTest = new ColorMatrix(true, false);
             break;
-        case INTRINSICS_COLOR_MATRIX_GREY:
+        case 22:
             mTest = new ColorMatrix(true, true);
             break;
-        case COPY:
+        case 23:
             mTest = new Copy();
             break;
-        case CROSS_PROCESS_USING_LUT:
+        case 24:
             mTest = new CrossProcess();
             break;
-        case CONVOLVE_5X5:
+        case 25:
             mTest = new Convolve5x5(false);
             break;
-        case INTRINSICS_CONVOLVE_5X5:
+        case 26:
             mTest = new Convolve5x5(true);
             break;
-        case MANDELBROT:
+        case 27:
             mTest = new Mandelbrot();
             break;
-        case INTRINSICS_BLEND:
+        case 28:
             mTest = new Blend();
             break;
         }
@@ -276,14 +243,45 @@ public class ImageProcessingActivity extends Activity
     }
 
     void setupTests() {
-        mTestSpinner.setAdapter(new ArrayAdapter<TestName>(
-            this, R.layout.spinner_layout, TestName.values()));
+        mTestNames = new String[29];
+        mTestNames[0] = "Levels Vec3 Relaxed";
+        mTestNames[1] = "Levels Vec4 Relaxed";
+        mTestNames[2] = "Levels Vec3 Full";
+        mTestNames[3] = "Levels Vec4 Full";
+        mTestNames[4] = "Blur radius 25";
+        mTestNames[5] = "Intrinsic Blur radius 25";
+        mTestNames[6] = "Greyscale";
+        mTestNames[7] = "Grain";
+        mTestNames[8] = "Fisheye Full";
+        mTestNames[9] = "Fisheye Relaxed";
+        mTestNames[10] = "Fisheye Approximate Full";
+        mTestNames[11] = "Fisheye Approximate Relaxed";
+        mTestNames[12] = "Vignette Full";
+        mTestNames[13] = "Vignette Relaxed";
+        mTestNames[14] = "Vignette Approximate Full";
+        mTestNames[15] = "Vignette Approximate Relaxed";
+        mTestNames[16] = "Group Test (emulated)";
+        mTestNames[17] = "Group Test (native)";
+        mTestNames[18] = "Convolve 3x3";
+        mTestNames[19] = "Intrinsics Convolve 3x3";
+        mTestNames[20] = "ColorMatrix";
+        mTestNames[21] = "Intrinsics ColorMatrix";
+        mTestNames[22] = "Intrinsics ColorMatrix Grey";
+        mTestNames[23] = "Copy";
+        mTestNames[24] = "CrossProcess (using LUT)";
+        mTestNames[25] = "Convolve 5x5";
+        mTestNames[26] = "Intrinsics Convolve 5x5";
+        mTestNames[27] = "Mandelbrot";
+        mTestNames[28] = "Intrinsics Blend";
+
+        mTestSpinner.setAdapter(new ArrayAdapter<String>(
+            this, R.layout.spinner_layout, mTestNames));
     }
 
     private AdapterView.OnItemSelectedListener mTestSpinnerListener =
             new AdapterView.OnItemSelectedListener() {
                 public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                    changeTest(TestName.values()[pos]);
+                    changeTest(pos);
                 }
 
                 public void onNothingSelected(AdapterView parent) {
@@ -332,7 +330,7 @@ public class ImageProcessingActivity extends Activity
         mBenchmarkResult.setText("Result: not run");
 
         setupTests();
-        changeTest(TestName.LEVELS_VEC3_RELAXED);
+        changeTest(0);
     }
 
 
@@ -371,10 +369,10 @@ public class ImageProcessingActivity extends Activity
         try {
             BufferedWriter rsWriter = new BufferedWriter(new FileWriter(resultFile));
             Log.v(TAG, "Saved results in: " + resultFile.getAbsolutePath());
-            for (TestName tn: TestName.values()) {
-                changeTest(tn);
+            for (int i = 0; i < mTestNames.length; i++ ) {
+                changeTest(i);
                 float t = getBenchmark();
-                String s = new String("" + tn.toString() + ", " + t);
+                String s = new String("" + mTestNames[i] + ", " + t);
                 rsWriter.write(s + "\n");
                 Log.v(TAG, "Test " + s + "ms\n");
             }
@@ -382,7 +380,7 @@ public class ImageProcessingActivity extends Activity
         } catch (IOException e) {
             Log.v(TAG, "Unable to write result file " + e.getMessage());
         }
-        changeTest(TestName.LEVELS_VEC3_RELAXED);
+        changeTest(0);
     }
 
     // For benchmark test
@@ -398,6 +396,7 @@ public class ImageProcessingActivity extends Activity
             mTest.runTest();
             mTest.finish();
         } while (t > java.lang.System.currentTimeMillis());
+
 
         //Log.v(TAG, "Benchmarking");
         int ct = 0;
