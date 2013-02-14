@@ -535,4 +535,8 @@ public class ExtendedPropertiesUtils {
             mPackageManager != null) + " App=" + getName() + " Dpi=" + getDpi() + 
             " Layout=" + getLayout());
     }
+    
+    public static boolean hasPhysicalKeys() {
+        return mContext.getResources().getBoolean(com.android.internal.R.bool.config_hasPhysicalButtons);
+    }
 }

@@ -227,6 +227,8 @@ public abstract class BaseStatusBar extends SystemUI implements
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.PIE_TRIGGER), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.PIE_ENABLE), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.EXPANDED_DESKTOP_STATE), false, this);
         }
 
@@ -485,8 +487,10 @@ public abstract class BaseStatusBar extends SystemUI implements
                 Settings.System.EXPANDED_DESKTOP_STATE, 0) == 1;
         boolean navbarZero = Integer.parseInt(ExtendedPropertiesUtils
                 .getProperty("com.android.systemui.navbar.dpi", "100")) == 0;
+        boolean enabled = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.PIE_ENABLE, 1) == 1;
 
-        return (expanded || navbarZero);
+        return (expanded || navbarZero) && enabled;
     }
 
     public void updatePieControls() {

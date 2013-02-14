@@ -1066,4 +1066,5 @@
          applied. -->
     <bool name="config_hasRemovableLid">false</bool>
 
+    <bool name="config_hasPhysicalButtons">false</bool>
 </resources>
