@@ -5546,6 +5546,13 @@ void TouchInputMapper::fadePointer() {
     }
 }
 
+nsecs_t TouchInputMapper::mLastStylusTime = 0;
+
+bool TouchInputMapper::rejectPalm(nsecs_t when) {
+  return (when - mLastStylusTime < mConfig.stylusPalmRejectionTime) &&
+    mPointerSimple.currentProperties.toolType != AMOTION_EVENT_TOOL_TYPE_STYLUS;
+}
+
 bool TouchInputMapper::isPointInsideSurface(int32_t x, int32_t y) {
     return x >= mRawPointerAxes.x.minValue && x <= mRawPointerAxes.x.maxValue
             && y >= mRawPointerAxes.y.minValue && y <= mRawPointerAxes.y.maxValue;
