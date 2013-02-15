@@ -1067,4 +1067,7 @@
     <bool name="config_hasRemovableLid">false</bool>
 
     <bool name="config_hasPhysicalButtons">false</bool>
+
+    <!-- Boolean to enable Stylus gestures -->
+    <bool name="config_stylusGestures">false</bool>
 </resources>
