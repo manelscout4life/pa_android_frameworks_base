@@ -541,6 +541,21 @@ public final class Settings {
     @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
     public static final String ACTION_NFCSHARING_SETTINGS = "android.settings.NFCSHARING_SETTINGS";
 
+    /**
+     * Activity Action: Show Daydream settings.
+     * <p>
+     * In some cases, a matching Activity may not exist, so ensure you
+     * safeguard against this.
+     * <p>
+     * Input: Nothing.
+     * <p>
+     * Output: Nothing.
+     * @see android.service.dreams.DreamService
+     * @hide
+     */
+    @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
+    public static final String ACTION_DREAM_SETTINGS = "android.settings.DREAM_SETTINGS";
+
     // End of Intent actions for Settings
 
     /**
@@ -4247,6 +4262,15 @@ public final class Settings {
 
         /**
          * Whether we keep the device on while the device is plugged in. Supported values are:
+         * URI for the "wireless charging started" sound.
+         * @hide
+         */
+        public static final String WIRELESS_CHARGING_STARTED_SOUND =
+                "wireless_charging_started_sound";
+
+        /**
+         * Whether we keep the device on while the device is plugged in.
+         * Supported values are:
          * <ul>
          * <li>{@code 0} to never stay on while plugged in</li>
          * <li>{@link BatteryManager#BATTERY_PLUGGED_AC} to stay on for AC charger</li>
@@ -5127,6 +5151,25 @@ public final class Settings {
          * those namespaces. The keys will only actually be backed up / restored if they are also mentioned in this
          * table (Global.SETTINGS_TO_BACKUP). NOTE: Settings are backed up and restored in the order they appear in this
          * array. If you have one setting depending on another, make sure that they are ordered appropriately.
+         * Persisted safe headphone volume management state by AudioService
+         * @hide
+         */
+        public static final String AUDIO_SAFE_VOLUME_STATE = "audio_safe_volume_state";
+
+        /**
+         * Settings to backup. This is here so that it's in the same place as the settings
+         * keys and easy to update.
+         *
+         * These keys may be mentioned in the SETTINGS_TO_BACKUP arrays in System
+         * and Secure as well.  This is because those tables drive both backup and
+         * restore, and restore needs to properly whitelist keys that used to live
+         * in those namespaces.  The keys will only actually be backed up / restored
+         * if they are also mentioned in this table (Global.SETTINGS_TO_BACKUP).
+         *
+         * NOTE: Settings are backed up and restored in the order they appear
+         *       in this array. If you have one setting depending on another,
+         *       make sure that they are ordered appropriately.
+         *
          * @hide
          */
         public static final String[] SETTINGS_TO_BACKUP = {
