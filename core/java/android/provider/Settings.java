@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
  * This code has been modified. Portions copyright (C) 2012, ParanoidAndroid Project.
+ * This code has been modified. Portions copyright (C) 2011, The CyanogenMod Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2177,6 +2178,13 @@ public final class Settings {
         public static final String GESTURES_DOUBLE_TAP = "gestures_double_tap";
 
         /**
+         * Quick Settings Quick Pulldown
+         *
+         * @hide
+         */
+        public static final String QS_QUICK_PULLDOWN = "qs_quick_pulldown";
+
+        /**
          * Navigation controls to Use
          * @hide
          */
@@ -2427,6 +2435,16 @@ public final class Settings {
         /**
          * Volume keys control cursor in text fields (default is 0) 0 - Disabled 1 - Volume up/down moves cursor
          * left/right 2 - Volume up/down moves cursor right/left
+         * Weather to minimize lockscreen challenge on screen turned on
+         * @hide
+         */
+        public static final String LOCKSCREEN_MAXIMIZE_WIDGETS = "lockscreen_maximize_widgets";
+
+        /**
+         * Volume keys control cursor in text fields (default is 0)
+         * 0 - Disabled
+         * 1 - Volume up/down moves cursor left/right
+         * 2 - Volume up/down moves cursor right/left
          * @hide
          */
         public static final String VOLUME_KEY_CURSOR_CONTROL = "volume_key_cursor_control";
