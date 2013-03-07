@@ -54,6 +54,7 @@ import android.os.IRemoteCallback;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.Parcel;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -320,7 +321,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     int mUserRotationMode = WindowManagerPolicy.USER_ROTATION_FREE;
     int mUserRotation = Surface.ROTATION_0;
-    int mUserRotationAngles;
     boolean mAccelerometerDefault;
 
     int mAllowAllRotations = -1;
@@ -348,6 +348,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     // Behavior of volbtn music controls
     boolean mVolBtnMusicControls;
     boolean mIsLongPress;
+
+    // HW overlays state
+    int mDisableOverlays = 0;
 
     private static final class PointerLocationInputEventReceiver extends InputEventReceiver {
         private final PointerLocationView mView;
@@ -583,7 +586,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     "fancy_rotation_anim"), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.ACCELEROMETER_ROTATION_ANGLES), false, this);
+                    Settings.System.EXPANDED_DESKTOP_STATE), false, this);
             updateSettings();
         }
 
@@ -932,6 +935,42 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         });
     }
 
+    private int updateFlingerOptions() {
+        int disableOverlays = 0;
+        try {
+            IBinder flinger = ServiceManager.getService("SurfaceFlinger");
+            if (flinger != null) {
+                Parcel data = Parcel.obtain();
+                Parcel reply = Parcel.obtain();
+                data.writeInterfaceToken("android.ui.ISurfaceComposer");
+                flinger.transact(1010, data, reply, 0);
+                reply.readInt();
+                reply.readInt();
+                reply.readInt();
+                reply.readInt();
+                disableOverlays = reply.readInt();
+                reply.recycle();
+                data.recycle();
+            }
+        } catch (RemoteException ex) {
+        }
+        return disableOverlays;
+    }
+
+    private void writeDisableOverlaysOption(int state) {
+        try {
+            IBinder flinger = ServiceManager.getService("SurfaceFlinger");
+            if (flinger != null) {
+                Parcel data = Parcel.obtain();
+                data.writeInterfaceToken("android.ui.ISurfaceComposer");
+                data.writeInt(state);
+                flinger.transact(1008, data, null, 0);
+                data.recycle();
+            }
+        } catch (RemoteException ex) {
+        }
+    }
+
     /** {@inheritDoc} */
     public void init(Context context, IWindowManager windowManager,
             WindowManagerFuncs windowManagerFuncs) {
@@ -950,6 +989,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mOrientationListener.setCurrentRotation(windowManager.getRotation());
         } catch (RemoteException ex) { }
 
+        mDisableOverlays = updateFlingerOptions();
         updateHybridLayout();
 
         mSettingsObserver = new SettingsObserver(mHandler);
@@ -979,25 +1019,42 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     false, new ContentObserver(new Handler()) {
             @Override
             public void onChange(boolean selfChange) {
+
+                boolean expDesktop = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.EXPANDED_DESKTOP_STATE, 0) == 1;
+
+                if (!expDesktop) {
+                    // When leaving fullscreen switch back to original HW state
+                    int disableOverlays = updateFlingerOptions();
+                    if (disableOverlays != mDisableOverlays) writeDisableOverlaysOption(mDisableOverlays);
+                } else {
+                    // Before switching to fullscreen safe current HW state, then disable
+                    mDisableOverlays = updateFlingerOptions();
+                    writeDisableOverlaysOption(1);
+                }
+
                 updateHybridLayout();
                 update(false);
 
-                // Restart default launcher activity
-                final PackageManager mPm = mContext.getPackageManager();
-                final ActivityManager am = (ActivityManager)mContext
-                        .getSystemService(Context.ACTIVITY_SERVICE);
-                final Intent intent = new Intent(Intent.ACTION_MAIN); 
-                intent.addCategory(Intent.CATEGORY_HOME); 
-                final ResolveInfo res = mPm.resolveActivity(intent, 0);
+                if (Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.EXPANDED_DESKTOP_RESTART_LAUNCHER, 1) == 1) {
+                    // Restart default launcher activity
+                    final PackageManager mPm = mContext.getPackageManager();
+                    final ActivityManager am = (ActivityManager)mContext
+                            .getSystemService(Context.ACTIVITY_SERVICE);
+                    final Intent intent = new Intent(Intent.ACTION_MAIN); 
+                    intent.addCategory(Intent.CATEGORY_HOME); 
+                    final ResolveInfo res = mPm.resolveActivity(intent, 0);
 
-                // Launcher is running task #1
-                List<ActivityManager.RunningTaskInfo> runningTasks = am.getRunningTasks(1);
-                if (runningTasks != null) {
-                    for (ActivityManager.RunningTaskInfo task : runningTasks) {
-                        String packageName = task.baseActivity.getPackageName();
-                        if (packageName.equals(res.activityInfo.packageName)) {
-                            closeApplication(packageName);
-                            break;
+                    // Launcher is running task #1
+                    List<ActivityManager.RunningTaskInfo> runningTasks = am.getRunningTasks(1);
+                    if (runningTasks != null) {
+                        for (ActivityManager.RunningTaskInfo task : runningTasks) {
+                            String packageName = task.baseActivity.getPackageName();
+                            if (packageName.equals(res.activityInfo.packageName)) {
+                                closeApplication(packageName);
+                                break;
+                            }
                         }
                     }
                 }
@@ -1233,9 +1290,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 updateRotation = true;
                 updateOrientationListenerLp();
             }
-
-            mUserRotationAngles = Settings.System.getInt(resolver,
-                    Settings.System.ACCELEROMETER_ROTATION_ANGLES, -1);
 
             if (mSystemReady) {
                 int pointerLocation = Settings.System.getIntForUser(resolver,
@@ -1746,6 +1800,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             return null;
         }
 
+        WindowManager wm = null;
+        View view = null;
+
         try {
             Context context = mContext;
             if (DEBUG_STARTING_WINDOW) Slog.d(TAG, "addStartingWindow " + packageName
@@ -1807,8 +1864,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             params.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_SHOW_FOR_ALL_USERS;
             params.setTitle("Starting " + packageName);
 
-            WindowManager wm = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
-            View view = win.getDecorView();
+            wm = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
+            view = win.getDecorView();
 
             if (win.isFloating()) {
                 // Whoops, there is no way to display an animation/preview
@@ -1838,6 +1895,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             // failure loading resources because we are loading from an app
             // on external storage that has been unmounted.
             Log.w(TAG, appToken + " failed creating starting window", e);
+        } finally {
+            if (view != null && view.getParent() == null) {
+                Log.w(TAG, "view not successfully added to wm, removing view");
+                wm.removeViewImmediate(view);
+            }
         }
 
         return null;
@@ -3269,7 +3331,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             if (DEBUG_LAYOUT) Log.i(TAG, "force=" + mForceStatusBar
                     + " forcefkg=" + mForceStatusBarFromKeyguard
                     + " top=" + mTopFullscreenOpaqueWindowState);
-            if (mForceStatusBar || mForceStatusBarFromKeyguard) {
+            if ((mForceStatusBar || mForceStatusBarFromKeyguard) &&
+                    Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.EXPANDED_DESKTOP_STATE, 0) == 0) {
                 if (DEBUG_LAYOUT) Log.v(TAG, "Showing status bar: forced");
                 if (mStatusBar.showLw(true)) changes |= FINISH_LAYOUT_REDO_LAYOUT;
             } else if (mTopFullscreenOpaqueWindowState != null) {
@@ -4272,25 +4336,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     mAllowAllRotations = mContext.getResources().getBoolean(
                             com.android.internal.R.bool.config_allowAllRotations) ? 1 : 0;
                 }
-                // Rotation setting bitmask
-                // 1=0 2=90 8=270
-                boolean allowed = true;
-                if (mUserRotationAngles < 0) {
-                    // Not set by user so use these defaults
-                    mUserRotationAngles = (1 | 2 | 8);
-                }
-                switch (sensorRotation) {
-                    case Surface.ROTATION_0:
-                        allowed = (mUserRotationAngles & 1) != 0;
-                        break;
-                    case Surface.ROTATION_90:
-                        allowed = (mUserRotationAngles & 2) != 0;
-                        break;
-                    case Surface.ROTATION_270:
-                        allowed = (mUserRotationAngles & 8) != 0;
-                        break;
-                }
-                if (allowed) {
+                if (sensorRotation != Surface.ROTATION_180
+                        || mAllowAllRotations == 1
+                        || orientation == ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR) {
                     preferredRotation = sensorRotation;
                 } else {
                     preferredRotation = lastRotation;
