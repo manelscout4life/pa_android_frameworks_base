@@ -2525,6 +2525,12 @@ public final class Settings {
          */
         public static final String EXPANDED_DESKTOP_RESTART_LAUNCHER = "expanded_desktop_restart_launcher";
 
+ 	/**	
+         * Enable Pie? Should default to 1 (yes, no)
+         * @hide
+         */
+       public static final String PIE_ENABLE = "pie_enable";
+
         /**
          * Pie menu, should default to 1 (yes, show)
          * @hide
