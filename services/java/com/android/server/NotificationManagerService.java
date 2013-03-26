@@ -560,10 +560,6 @@ public class NotificationManagerService extends INotificationManager.Stub
             boolean queryRestart = false;
             boolean packageChanged = false;
 
-            boolean ledScreenOn = Settings.Secure.getInt(
-              mContext.getContentResolver(),
-              Settings.Secure.LED_SCREEN_ON, 0) == 1;
-
             if (action.equals(Intent.ACTION_PACKAGE_REMOVED)
                     || action.equals(Intent.ACTION_PACKAGE_RESTARTED)
                     || (packageChanged=action.equals(Intent.ACTION_PACKAGE_CHANGED))
@@ -617,7 +613,7 @@ public class NotificationManagerService extends INotificationManager.Stub
                 if (userHandle >= 0) {
                     cancelAllNotificationsInt(null, 0, 0, true, userHandle);
                 }
-            } else if (action.equals(Intent.ACTION_USER_PRESENT) && !ledScreenOn) {
+            } else if (action.equals(Intent.ACTION_USER_PRESENT)) {
                 // turn off LED when user passes through lock screen
             }
         }
@@ -1598,11 +1594,6 @@ public class NotificationManagerService extends INotificationManager.Stub
     private void updateLightsLocked()
     {
 
-        // Get Settings "flash when screen ON" flag
-        boolean ledScreenOn = Settings.Secure.getInt(
-          mContext.getContentResolver(),
-          Settings.Secure.LED_SCREEN_ON, 0) == 1;
-
         // handle notification lights
         if (mLedNotification == null) {
             // get next notification, if any
@@ -1630,7 +1621,7 @@ public class NotificationManagerService extends INotificationManager.Stub
                 Notification.FLAG_FORCE_LED_SCREEN_OFF) != 0;
 
         // Don't flash while we are in a call, screen is on or we are in quiet hours with light dimmed
-        if (mLedNotification == null || mInCall || (mScreenOn && !ledScreenOn)) {
+        if (mInCall || mScreenOn || (inQuietHours() && mQuietHoursDim) || (wasScreenOn && !forceWithScreenOff)) {
             mNotificationLight.turnOff();
         } else {
             int ledARGB;
