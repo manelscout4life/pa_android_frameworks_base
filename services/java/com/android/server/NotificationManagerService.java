@@ -158,7 +158,7 @@ public class NotificationManagerService extends INotificationManager.Stub
 
     // for enabling and disabling notification pulse behaviour
     private boolean mScreenOn = true;
-    private boolean mWasScreenOn = false;
+    private boolean mWasScreenOn = true;
     private boolean mInCall = false;
     private boolean mNotificationPulseEnabled;
     private HashMap<String, NotificationLedValues> mNotificationPulseCustomLedValues;
@@ -603,9 +603,11 @@ public class NotificationManagerService extends INotificationManager.Stub
             } else if (action.equals(Intent.ACTION_SCREEN_ON)) {
                 // Keep track of screen on/off state, but do not turn off the notification light
                 // until user passes through the lock screen or views the notification.
-                mScreenOn = true;
+                mScreenOn = false;
             } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
                 mScreenOn = false;
+                mWasScreenOn = true;
+                updateLightsLocked();
             } else if (action.equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)) {
                 mInCall = (intent.getStringExtra(TelephonyManager.EXTRA_STATE).equals(
                         TelephonyManager.EXTRA_STATE_OFFHOOK));
@@ -617,7 +619,6 @@ public class NotificationManagerService extends INotificationManager.Stub
                 }
             } else if (action.equals(Intent.ACTION_USER_PRESENT) && !ledScreenOn) {
                 // turn off LED when user passes through lock screen
-                mNotificationLight.turnOff();
             }
         }
     };
