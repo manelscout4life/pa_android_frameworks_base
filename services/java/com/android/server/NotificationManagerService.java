@@ -560,6 +560,10 @@ public class NotificationManagerService extends INotificationManager.Stub
             boolean queryRestart = false;
             boolean packageChanged = false;
 
+            boolean ledScreenOn = Settings.Secure.getInt(
+              mContext.getContentResolver(),
+              Settings.Secure.LED_SCREEN_ON, 0) == 1;
+
             if (action.equals(Intent.ACTION_PACKAGE_REMOVED)
                     || action.equals(Intent.ACTION_PACKAGE_RESTARTED)
                     || (packageChanged=action.equals(Intent.ACTION_PACKAGE_CHANGED))
@@ -611,7 +615,7 @@ public class NotificationManagerService extends INotificationManager.Stub
                 if (userHandle >= 0) {
                     cancelAllNotificationsInt(null, 0, 0, true, userHandle);
                 }
-            } else if (action.equals(Intent.ACTION_USER_PRESENT)) {
+            } else if (action.equals(Intent.ACTION_USER_PRESENT) && !ledScreenOn) {
                 // turn off LED when user passes through lock screen
                 mNotificationLight.turnOff();
             }
@@ -1592,6 +1596,12 @@ public class NotificationManagerService extends INotificationManager.Stub
     // lock on mNotificationList
     private void updateLightsLocked()
     {
+
+        // Get Settings "flash when screen ON" flag
+        boolean ledScreenOn = Settings.Secure.getInt(
+          mContext.getContentResolver(),
+          Settings.Secure.LED_SCREEN_ON, 0) == 1;
+
         // handle notification lights
         if (mLedNotification == null) {
             // get next notification, if any
@@ -1619,7 +1629,7 @@ public class NotificationManagerService extends INotificationManager.Stub
                 Notification.FLAG_FORCE_LED_SCREEN_OFF) != 0;
 
         // Don't flash while we are in a call, screen is on or we are in quiet hours with light dimmed
-        if (mInCall || mScreenOn || (inQuietHours() && mQuietHoursDim) || (wasScreenOn && !forceWithScreenOff)) {
+        if (mLedNotification == null || mInCall || (mScreenOn && !ledScreenOn)) {
             mNotificationLight.turnOff();
         } else {
             int ledARGB;
