@@ -51,11 +51,11 @@ import java.util.List;
 public class PieControl implements OnClickListener, NavigationCallback {
     public static final String BACK_BUTTON = "##back##";
     public static final String HOME_BUTTON = "##home##";
-    public static final String LAST_APP_BUTTON = "##lastapp##";
     public static final String MENU_BUTTON = "##menu##";
     public static final String SEARCH_BUTTON = "##search##";
     public static final String RECENT_BUTTON = "##recent##";
     public static final String CLEAR_ALL_BUTTON = "##clear##";
+    public static final String LAST_APP_BUTTON = "##lastapp##";
 
     protected Context mContext;
     protected PieMenu mPie;
@@ -130,8 +130,8 @@ public class PieControl implements OnClickListener, NavigationCallback {
         mRecent = makeItem(R.drawable.ic_sysbar_recent, 1, RECENT_BUTTON, false);
         mLastApp = makeItem(R.drawable.ic_sysbar_lastapp, 1, LAST_APP_BUTTON, true);
         mMenu = makeItem(R.drawable.ic_sysbar_menu, 1, MENU_BUTTON, true);
-        mPie.addItem(mLastApp);
         mPie.addItem(mMenu);
+        mPie.addItem(mLastApp);
 
         if(mIsAssistantAvailable) {
             mSearch = makeItem(R.drawable.ic_sysbar_search_side, 1, SEARCH_BUTTON, true);

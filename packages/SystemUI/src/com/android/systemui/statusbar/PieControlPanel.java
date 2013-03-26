@@ -290,8 +290,6 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
             injectKeyDelayed(KeyEvent.KEYCODE_BACK);
         } else if (buttonName.equals(PieControl.HOME_BUTTON)) {
             injectKeyDelayed(KeyEvent.KEYCODE_HOME);
-        } else if (buttonName.equals(PieControl.LAST_APP_BUTTON)) {
-            toggleLastApp();
         } else if (buttonName.equals(PieControl.MENU_BUTTON)) {
             injectKeyDelayed(KeyEvent.KEYCODE_MENU);
         } else if (buttonName.equals(PieControl.RECENT_BUTTON)) {
@@ -300,6 +298,8 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
             mStatusBar.clearRecentApps();
         } else if (buttonName.equals(PieControl.SEARCH_BUTTON)) {
             launchAssistAction();
+        } else if (buttonName.equals(PieControl.LAST_APP_BUTTON)) {
+            toggleLastApp();
         }
     }
 
