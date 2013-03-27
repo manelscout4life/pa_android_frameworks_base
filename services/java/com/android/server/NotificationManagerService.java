@@ -519,11 +519,6 @@ public class NotificationManagerService extends INotificationManager.Stub
                 } finally {
                     Binder.restoreCallingIdentity(identity);
                 }
-
-                // light
-                mLights.clear();
-                mLedNotification = null;
-                updateLightsLocked();
             }
         }
 
@@ -1621,7 +1616,7 @@ public class NotificationManagerService extends INotificationManager.Stub
                 Notification.FLAG_FORCE_LED_SCREEN_OFF) != 0;
 
         // Don't flash while we are in a call, screen is on or we are in quiet hours with light dimmed
-        if (mLedNotification == null || mInCall || (mScreenOn && !ledScreenOn)) {
+        if (mLedNotification == null || mInCall ) {
             mNotificationLight.turnOff();
         } else {
             int ledARGB;
