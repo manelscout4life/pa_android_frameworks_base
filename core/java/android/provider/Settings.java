@@ -1850,6 +1850,13 @@ public final class Settings {
          */
         public static final String VIBRATE_ON = "vibrate_on";
 
+       /**
+        * NFC polling mode configuration key
+        *
+        * @hide
+        */
+       public static final String NFC_POLLING_MODE = "nfc_polling_mode";
+
         /**
          * If 1, redirects the system vibrator to all currently attached input devices
          * that support vibration.  If there are no such input devices, then the system
@@ -2575,6 +2582,12 @@ public final class Settings {
         */
         public static final String DISABLE_FULLSCREEN_KEYBOARD = "disable_fullscreen_keyboard";
 
+       /**
+         * HALO enabled, should default to 0 (HALO is disabled)
+         * @hide
+         */
+        public static final String HALO_ENABLED = "halo_enabled";
+
         /**
          * HALO, should default to 0 (no, do not show)
          * @hide
@@ -2592,6 +2605,13 @@ public final class Settings {
          * @hide
          */
         public static final String HALO_HIDE = "halo_hide";
+
+        /**
+         * HALO pause activities?, defaults to 0 (no, do not pause) on devices which isLargeRAM() == true
+         * otherwise it defaults to 1 (yes, do pause)
+         * @hide
+         */
+        public static final String HALO_PAUSE = "halo_pause";
 
         /**
          * Pie menu, should default to 1 (yes, show)
