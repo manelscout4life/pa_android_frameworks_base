@@ -1708,11 +1708,7 @@ public class NotificationManagerService extends INotificationManager.Stub
         }
 
         // Don't flash while we are in a call, screen is on or we are in quiet hours with light dimmed
-<<<<<<< HEAD
         if (mLedNotification == null || mInCall ) {
-=======
-        if (mLedNotification == null || mInCall || mScreenOn || (inQuietHours() && mQuietHoursDim)) {
->>>>>>> b1fa014d2b52b232dfa13d8cd55fac3ce65fc0e4
             mNotificationLight.turnOff();
         } else {
             int ledARGB;
