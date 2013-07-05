@@ -1656,7 +1656,6 @@ public final class Settings {
          * 1 -- true
          * @hide
          */
-
         public static final String MMS_AUTO_RETRIEVAL_ON_ROAMING = "mms_auto_on_roaming";
 
         /**
@@ -2474,12 +2473,6 @@ public final class Settings {
         public static final String VOLUME_LINK_NOTIFICATION = "volume_link_notification";
 
         /**
-         * Whether or not to launch default music player when headset is connected
-         * @hide
-         */
-        public static final String HEADSET_CONNECT_PLAYER = "headset_connect_player";
-
-        /**
          * Navigation controls to Use
          *
          * @hide
@@ -2571,14 +2564,6 @@ public final class Settings {
         public static final String EXPANDED_DESKTOP_STATE = "expanded_desktop_state";
 
         /**
-
- 	/**	
-         * Enable Pie? Should default to 1 (yes, no)
-         * @hide
-         */
-       public static final String PIE_ENABLE = "pie_enable";
-
-        /**
         * Override and forcefully disable the fullscreen keyboard
         * @hide
         */
@@ -2634,13 +2619,7 @@ public final class Settings {
         public static final String PIE_SEARCH = "pie_search";
 
         /**
-         * Pie last app, should default to 0 (no, show only when needed)
-         * @hide
-         */
-        public static final String PIE_LAST_APP = "pie_last_app";
-
-        /**
-         * Pie gap angle, should default to 3
+         * Pie gap angle, should default to 2
          * @hide
          */
         public static final String PIE_GAP = "pie_gap";
@@ -2728,61 +2707,6 @@ public final class Settings {
         public static final String VOLBTN_MUSIC_CONTROLS = "volbtn_music_controls";
 
         /**
-         * Whether national data roaming should be used.
-         * @hide
-         */
-        public static final String MVNO_ROAMING = "mvno_roaming";
-
-        /**
-         * Enable Stylus Gestures
-         *
-         * @hide
-         */
-        public static final String ENABLE_STYLUS_GESTURES = "enable_stylus_gestures";
-
-        /**
-         * Left Swipe Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_LEFT_SWIPE = "gestures_left_swipe";
-
-        /**
-         * Right Swipe Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_RIGHT_SWIPE = "gestures_right_swipe";
-
-        /**
-         * Up Swipe Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_UP_SWIPE = "gestures_up_swipe";
-
-        /**
-         * down Swipe Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_DOWN_SWIPE = "gestures_down_swipe";
-
-        /**
-         * Long press Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_LONG_PRESS = "gestures_long_press";
-
-        /**
-         * double tap Action
-         *
-         * @hide
-         */
-        public static final String GESTURES_DOUBLE_TAP = "gestures_double_tap";
-
-        /**	
          * Whether to enable quiet hours.
          * @hide
          */
@@ -3956,6 +3880,7 @@ public final class Settings {
          */
         public static final String ADB_PORT = "adb_port";
 
+
         /**
          * Setting to allow mock locations and location provider status to be injected into the
          * LocationManager service for testing purposes during application development.  These
@@ -4946,8 +4871,13 @@ public final class Settings {
             MOUNT_UMS_NOTIFY_ENABLED,
             UI_NIGHT_MODE,
             LOCK_SCREEN_OWNER_INFO,
+<<<<<<< HEAD
+            LOCK_SCREEN_OWNER_INFO_ENABLED
+=======
             LOCK_SCREEN_OWNER_INFO_ENABLED,
+            ADVANCED_REBOOT,
             PRIVACY_GUARD_DEFAULT
+>>>>>>> e48fce6... framework: Privacy Guard
         };
 
         /**
