@@ -985,8 +985,8 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback, TabletTi
             float total = TICKER_HIDE_TIME + startDuration + 1000;
             PropertyValuesHolder tickerUpFrames = PropertyValuesHolder.ofKeyframe("haloContentAlpha",
                     Keyframe.ofFloat(0f, mHaloTextViewL.getAlpha()),
-                    Keyframe.ofFloat(startDuration / total, 1f),
-                    Keyframe.ofFloat((TICKER_HIDE_TIME + startDuration) / total, 1f),
+                    Keyframe.ofFloat(0.1f, 1f),
+                    Keyframe.ofFloat(0.9f, 1f),
                     Keyframe.ofFloat(1f, 0f));
             tickerAnimator.animate(ObjectAnimator.ofPropertyValuesHolder(this, tickerUpFrames).setDuration((int)total),
                     new DecelerateInterpolator(), null, delay, null);
@@ -1114,10 +1114,12 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback, TabletTi
                 }
             }
 
-            state = canvas.save();
-            canvas.translate(x, getHaloContentY());
-            mHaloContentView.draw(canvas);
-            canvas.restoreToCount(state);
+            if (getHaloContentAlpha() > 0.0f) {
+                state = canvas.save();
+                canvas.translate(x, getHaloContentY());
+                mHaloContentView.draw(canvas);
+                canvas.restoreToCount(state);
+            }
 
             // X
             float fraction = 1 - ((float)xPaint.getAlpha()) / 255;
@@ -1227,7 +1229,7 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback, TabletTi
         mEffect.invalidate();
 
         // Set Number
-        mEffect.setHaloMessageNumber(n.number, alwaysFlip);
+        mEffect.setHaloMessageNumber(n.number, alwaysFlip, delay);
     }
 
     public void updateTicker(StatusBarNotification notification) {
@@ -1264,16 +1266,16 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback, TabletTi
                     mLastNotificationEntry = entry;
 
                     if (allowed && mState != State.FIRST_RUN) {
-                        tick(entry, text, HaloEffect.WAKE_TIME, 1000, true);
-
-                        // Pop while not tasking, only if notification is certified fresh
-                        if (mGesture != Gesture.TASK && mState != State.SILENT) mEffect.ping(mPaintHoloBlue, HaloEffect.WAKE_TIME);
-
                         if (mState == State.IDLE || mState == State.HIDDEN) {
                             mEffect.wake();
-                            mEffect.nap(HaloEffect.NAP_DELAY);
-                            if (mHideTicker) mEffect.sleep(HaloEffect.SLEEP_DELAY, HaloEffect.SLEEP_TIME, false);
+                            mEffect.nap(HaloEffect.NAP_DELAY + HaloEffect.WAKE_TIME * 2);
+                            if (mHideTicker) mEffect.sleep(HaloEffect.SLEEP_DELAY + HaloEffect.WAKE_TIME * 2, HaloEffect.SLEEP_TIME, false);
                         }
+
+                        tick(entry, text, HaloEffect.WAKE_TIME * 3, 1000, true);
+
+                        // Pop while not tasking, only if notification is certified fresh
+                        if (mGesture != Gesture.TASK && mState != State.SILENT) mEffect.ping(mPaintHoloBlue, HaloEffect.WAKE_TIME * 2);
                     }
                 }
                 break;
