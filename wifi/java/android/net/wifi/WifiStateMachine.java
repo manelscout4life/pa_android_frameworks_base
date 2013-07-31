@@ -765,7 +765,7 @@ public class WifiStateMachine extends StateMachine {
         if (enable) {
             WifiNative.setMode(0);
             /* Argument is the state that is entered prior to load */
-            sendMessage(obtainMessage(CMD_LOAD_DRIVER, WIFI_STATE_ENABLING, 0));
+            sendMessage(obtainMessage(WIFI_STATE_ENABLING, 0));
             sendMessage(CMD_START_SUPPLICANT);
         } else {
             sendMessage(CMD_STOP_SUPPLICANT);
@@ -779,7 +779,7 @@ public class WifiStateMachine extends StateMachine {
         if (enable) {
             WifiNative.setMode(1);
             /* Argument is the state that is entered prior to load */
-            sendMessage(obtainMessage(CMD_LOAD_DRIVER, WIFI_AP_STATE_ENABLING, 0));
+            sendMessage(obtainMessage(WIFI_AP_STATE_ENABLING, 0));
             sendMessage(obtainMessage(CMD_START_AP, wifiConfig));
             sendMessage(CMD_START_AP, wifiConfig);
         } else {
