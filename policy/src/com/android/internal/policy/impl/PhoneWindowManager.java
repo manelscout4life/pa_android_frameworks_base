@@ -630,23 +630,32 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     "fancy_rotation_anim"), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.EXPANDED_DESKTOP_STATE), false, this);
+                    Settings.System.EXPANDED_DESKTOP_STATE), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_HOME_LONG_PRESS_ACTION), false, this);
+                    Settings.System.KEY_HOME_LONG_PRESS_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_MENU_ACTION), false, this);
+                    Settings.System.KEY_MENU_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_MENU_LONG_PRESS_ACTION), false, this);
+                    Settings.System.KEY_MENU_LONG_PRESS_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_ASSIST_ACTION), false, this);
+                    Settings.System.KEY_ASSIST_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_ASSIST_LONG_PRESS_ACTION), false, this);
+                    Settings.System.KEY_ASSIST_LONG_PRESS_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_APP_SWITCH_ACTION), false, this);
+                    Settings.System.KEY_APP_SWITCH_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.KEY_APP_SWITCH_LONG_PRESS_ACTION), false, this);
+                    Settings.System.KEY_APP_SWITCH_LONG_PRESS_ACTION), false, this,
+                    UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.HARDWARE_KEY_REBINDING), false, this);
+                    Settings.System.HARDWARE_KEY_REBINDING), false, this,
+                    UserHandle.USER_ALL);
 
             updateSettings();
         }
@@ -1268,7 +1277,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     Settings.System.KEY_HOME_LONG_PRESS_ACTION,
                     hasAppSwitch ? KEY_ACTION_NOTHING : KEY_ACTION_APP_SWITCH,
                     UserHandle.USER_CURRENT);
-            mHasMenuKeyEnabled = mLongPressOnHomeBehavior == KEY_ACTION_MENU;
+            mDoubleTapOnHomeBehavior = Settings.System.getIntForUser(resolver,
+                    Settings.System.KEY_HOME_DOUBLE_TAP_ACTION,
+                    mDoubleTapOnHomeBehavior, UserHandle.USER_CURRENT);
+            mHasMenuKeyEnabled = mLongPressOnHomeBehavior == KEY_ACTION_MENU
+                    || mDoubleTapOnHomeBehavior == KEY_ACTION_MENU;
         }
         if (hasMenu) {
             mPressOnMenuBehavior = Settings.System.getIntForUser(resolver,
@@ -5690,6 +5703,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 pw.print(" mIncallPowerBehavior="); pw.print(mIncallPowerBehavior);
                 pw.print(" mRingHomeBehavior="); pw.print(mRingHomeBehavior);
                 pw.print(" mLongPressOnHomeBehavior="); pw.println(mLongPressOnHomeBehavior);
+                pw.print(" mDoubleTapOnHomeBehavior="); pw.println(mDoubleTapOnHomeBehavior);
         pw.print(prefix); pw.print("mLandscapeRotation="); pw.print(mLandscapeRotation);
                 pw.print(" mSeascapeRotation="); pw.println(mSeascapeRotation);
         pw.print(prefix); pw.print("mPortraitRotation="); pw.print(mPortraitRotation);
