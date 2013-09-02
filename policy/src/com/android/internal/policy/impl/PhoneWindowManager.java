@@ -84,8 +84,6 @@ import com.android.internal.widget.PointerLocationView;
 
 import dalvik.system.DexClassLoader;
 
-import android.service.dreams.IDreamManager;
-import android.util.ExtendedPropertiesUtils;
 import android.service.dreams.DreamService;
 import android.service.dreams.IDreamManager;
 import android.util.DisplayMetrics;
@@ -124,6 +122,7 @@ import android.media.AudioService;
 import android.media.AudioManager;
 
 import com.android.internal.R;
+import com.android.internal.os.DeviceKeyHandler;
 import com.android.internal.policy.PolicyManager;
 import com.android.internal.policy.impl.keyguard.KeyguardViewManager;
 import com.android.internal.policy.impl.keyguard.KeyguardViewMediator;
